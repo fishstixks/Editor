@@ -1,197 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Photobooth</title>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<meta charset="UTF-8">
 
-    <link rel="stylesheet" href="style.css">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Digital Photobooth</title>
+
+<link rel="stylesheet" href="style.css">
+
 </head>
 
-<body class="bg-slate-950 text-white min-h-screen flex items-center justify-center p-4">
+<body>
 
-<div class="w-full max-w-md">
+<!-- ==========================================
+WELCOME SCREEN
+========================================== -->
 
-    <!-- ================= WELCOME ================= -->
+<div id="welcomeScreen" class="screen active">
 
-    <section id="welcomeScreen"
-        class="bg-slate-900 rounded-3xl p-8 border border-slate-800 text-center">
+    <div class="card">
 
-        <h1 class="text-4xl font-black text-blue-400 mb-4">
-            Digital Photobooth
-        </h1>
+        <h1>📸 Digital Photobooth</h1>
 
-        <p class="text-slate-400 mb-8">
-            Choose a layout and begin your session.
-        </p>
+        <p>Create your own Korean-style photostrip.</p>
 
-        <label class="block text-left mb-2 font-semibold">
-            Layout
-        </label>
+        <label>Theme</label>
 
-        <select
-            id="layoutSelect"
-            class="w-full rounded-xl bg-slate-800 p-4 mb-6">
+        <select id="theme">
 
-            <option value="strip">
-                4 Photo Strip
-            </option>
+            <option value="classic">Classic White</option>
 
-            <option value="grid">
-                2 × 2 Grid
-            </option>
+            <option value="black">Midnight Black</option>
+
+            <option value="pink">Cherry Blossom</option>
+
+            <option value="blue">Ocean Blue</option>
+
+            <option value="mint">Mint Green</option>
+
+            <option value="cream">Cream</option>
 
         </select>
 
-        <button
-            id="startBtn"
-            class="w-full bg-blue-600 hover:bg-blue-500 rounded-xl py-4 font-bold">
+        <label>Layout</label>
 
-            Start Session
+        <select id="layout">
+
+            <option value="strip">4 Photo Strip</option>
+
+            <option value="grid">2 × 2 Grid</option>
+
+        </select>
+
+        <label>Filter</label>
+
+        <select id="filter">
+
+            <option value="none">Normal</option>
+
+            <option value="bw">Black & White</option>
+
+            <option value="warm">Warm</option>
+
+            <option value="cool">Cool</option>
+
+            <option value="vintage">Vintage</option>
+
+        </select>
+
+        <button id="startBtn">
+
+            Start Booth
 
         </button>
 
-    </section>
+    </div>
 
+</div>
 
+<!-- ==========================================
+CAMERA SCREEN
+========================================== -->
 
-    <!-- ================= BOOTH ================= -->
+<div id="cameraScreen" class="screen">
 
-    <section
-        id="boothScreen"
-        class="hidden bg-slate-900 rounded-3xl border border-slate-800 p-6 text-center">
+    <div class="cameraContainer">
 
-        <h2
-            class="text-2xl font-bold mb-2">
+        <video
+            id="camera"
+            autoplay
+            playsinline
+            muted>
+        </video>
 
-            Digital Photobooth
+        <div id="flash"></div>
 
-        </h2>
-
-        <p
-            id="status"
-            class="text-blue-400 font-semibold mb-5">
-
-            Waiting...
-
-        </p>
-
-        <!-- Countdown -->
-
-        <div
-            id="countdown"
-            class="hidden text-7xl font-black text-yellow-400 py-8">
+        <div id="countdown">
 
             3
 
         </div>
 
-        <!-- Flash -->
+        <div id="progress">
 
-        <div
-            id="flashOverlay">
-
-        </div>
-
-        <!-- Printing -->
-
-        <div
-            id="printingArea"
-            class="hidden">
-
-            <div class="printer">
-
-                <div class="printer-top">
-
-                    DIGITAL PHOTOBOOTH
-
-                </div>
-
-                <div class="paper-slot">
-
-                    <img
-                        id="printingImage"
-                        src=""
-                        alt="printing">
-
-                </div>
-
-            </div>
-
-            <p class="mt-5 text-yellow-400 font-bold animate-pulse">
-
-                Printing...
-
-            </p>
+            Photo 1 / 4
 
         </div>
 
-        <!-- Final Preview -->
+        <div id="topBar">
 
-        <div
-            id="previewArea"
-            class="hidden">
+            <button id="switchCamera">
 
-            <img
-                id="previewImage"
-                class="rounded-xl border border-slate-700 w-full">
-
-        </div>
-
-        <!-- QR -->
-
-        <div
-            id="qrArea"
-            class="hidden mt-5">
-
-            <p class="mb-3">
-
-                Scan to download
-
-            </p>
-
-            <img
-                id="qrCode"
-                class="mx-auto bg-white rounded-xl p-2">
-
-        </div>
-
-        <!-- Buttons -->
-
-        <div class="space-y-3 mt-5">
-
-            <button
-                id="downloadBtn"
-                class="hidden w-full bg-green-600 hover:bg-green-500 py-4 rounded-xl font-bold">
-
-                Download Photo
+                🔄
 
             </button>
 
-            <button
-                id="restartBtn"
-                class="hidden w-full bg-slate-700 hover:bg-slate-600 py-4 rounded-xl font-bold">
+            <button id="cancelSession">
 
-                New Session
+                ✖
 
             </button>
 
         </div>
 
-    </section>
+    </div>
 
 </div>
 
-<input
-    id="fileInput"
-    type="file"
-    accept="image/*"
-    multiple
-    hidden>
+<!-- ==========================================
+PROCESSING
+========================================== -->
+
+<div id="processingScreen" class="screen">
+
+    <div class="card">
+
+        <h2>
+
+            Processing Photos...
+
+        </h2>
+
+        <div class="loader"></div>
+
+        <p>
+
+            Creating your photostrip...
+
+        </p>
+
+    </div>
+
+</div>
+
+<!-- ==========================================
+PRINTING
+========================================== -->
+
+<div id="printingScreen" class="screen">
+
+    <div class="printer">
+
+        <div class="printerTop">
+
+            DIGITAL PHOTOBOOTH
+
+        </div>
+
+        <div class="paperArea">
+
+            <img
+                id="printPreview">
+        </div>
+
+    </div>
+
+    <p>
+
+        Printing...
+
+    </p>
+
+</div>
+
+<!-- ==========================================
+RESULT
+========================================== -->
+
+<div id="resultScreen" class="screen">
+
+    <img id="resultImage">
+
+    <div class="buttons">
+
+        <button id="downloadBtn">
+
+            Download
+
+        </button>
+
+        <button id="newSession">
+
+            New Session
+
+        </button>
+
+    </div>
+
+</div>
+
+<audio id="shutter">
+
+    <source
+        src="assets/shutter.mp3"
+        type="audio/mpeg">
+
+</audio>
 
 <script src="photobooth.js"></script>
 
 </body>
+
 </html>
