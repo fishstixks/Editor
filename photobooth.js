@@ -1,7 +1,7 @@
 /*
 ==================================================
 DIGITAL PHOTOBOOTH
-Version 2.0.2 Alpha
+Version 2.0.3 Alpha
 PART 1 / 4
 ==================================================
 */
@@ -26,14 +26,13 @@ const camera = document.getElementById("camera");
 const switchCameraBtn = document.getElementById("switchCamera");
 const cancelSessionBtn = document.getElementById("cancelSession");
 
+
 const countdownDisplay = document.getElementById("countdown");
-
 const photoCounter = document.getElementById("photoCounter");
-
 const progressFill = document.getElementById("progressFill");
 
-const flash = document.getElementById("flash");
 
+const flash = document.getElementById("flash");
 const shutter = document.getElementById("shutter");
 
 
@@ -50,23 +49,37 @@ const previewImages = [
 ];
 
 
-const printPreview = document.getElementById("printPreview");
-const printingStatus = document.getElementById("printingStatus");
+const exportCanvas =
+document.getElementById("exportCanvas");
 
 
-const resultImage = document.getElementById("resultImage");
+const printPreview =
+document.getElementById("printPreview");
 
 
-const downloadBtn = document.getElementById("downloadBtn");
-const retakeBtn = document.getElementById("retakeBtn");
-const newSessionBtn = document.getElementById("newSession");
+const printingStatus =
+document.getElementById("printingStatus");
 
 
-const exportCanvas = document.getElementById("exportCanvas");
+const resultImage =
+document.getElementById("resultImage");
+
+
+const downloadBtn =
+document.getElementById("downloadBtn");
+
+
+const retakeBtn =
+document.getElementById("retakeBtn");
+
+
+const newSessionBtn =
+document.getElementById("newSession");
+
 
 
 // ==================================================
-// APPLICATION STATE
+// STATE
 // ==================================================
 
 let currentStream = null;
@@ -83,94 +96,106 @@ let sessionActive = false;
 
 
 let selectedTheme = "classic";
+
 let selectedLayout = "strip";
+
 let selectedFilter = "none";
 
 
-// Camera resolution target
+
+let captureLock = false;
+
+
+
 const CAMERA_WIDTH = 1280;
+
 const CAMERA_HEIGHT = 1920;
 
 
+
 // ==================================================
-// SCREEN TRANSITION SYSTEM
+// SCREEN CONTROL
 // ==================================================
 
-function showScreen(screen){
+function showScreen(target){
+
 
     const screens = [
+
         welcomeScreen,
         cameraScreen,
         previewScreen,
         processingScreen,
         printingScreen,
         resultScreen
+
     ];
 
 
-    screens.forEach(item => {
+    screens.forEach(screen=>{
 
-        if(item){
+        if(screen){
 
-            item.classList.remove("active");
+            screen.classList.remove("active");
 
         }
 
     });
 
 
-    if(screen){
+    if(target){
 
-        setTimeout(()=>{
+        requestAnimationFrame(()=>{
 
-            screen.classList.add("active");
+            target.classList.add("active");
 
-        },50);
+        });
 
     }
 
 }
 
 
+
 // ==================================================
-// THEME SYSTEM
+// SETTINGS
 // ==================================================
 
 themeSelector.addEventListener(
-    "change",
-    ()=>{
-
-        selectedTheme = themeSelector.value;
-
-        document.body.className =
-        "theme-" + selectedTheme;
-
-    }
-);
+"change",
+()=>{
 
 
-// ==================================================
-// SETTINGS UPDATE
-// ==================================================
+    selectedTheme =
+    themeSelector.value;
+
+
+    document.body.className =
+    "theme-" + selectedTheme;
+
+
+});
+
 
 layoutSelector.addEventListener(
-    "change",
-    ()=>{
+"change",
+()=>{
 
-        selectedLayout = layoutSelector.value;
+    selectedLayout =
+    layoutSelector.value;
 
-    }
-);
+});
 
 
 filterSelector.addEventListener(
-    "change",
-    ()=>{
+"change",
+()=>{
 
-        selectedFilter = filterSelector.value;
+    selectedFilter =
+    filterSelector.value;
 
-    }
-);
+});
+
 
 
 // ==================================================
@@ -179,17 +204,37 @@ filterSelector.addEventListener(
 
 async function startCamera(){
 
+
     stopCamera();
 
 
+
+    if(!navigator.mediaDevices ||
+       !navigator.mediaDevices.getUserMedia){
+
+
+        alert(
+        "Camera is not supported on this browser."
+        );
+
+
+        return false;
+
+    }
+
+
+
     try{
+
 
         currentStream =
         await navigator.mediaDevices.getUserMedia({
 
             video:{
 
-                facingMode:facingMode,
+                facingMode:{
+                    ideal:facingMode
+                },
 
                 width:{
                     ideal:CAMERA_WIDTH
@@ -206,26 +251,39 @@ async function startCamera(){
         });
 
 
-        camera.srcObject = currentStream;
+
+        camera.srcObject =
+        currentStream;
+
 
 
         await camera.play();
 
 
+
+        return true;
+
+
     }
     catch(error){
 
+
         console.error(
-            "Camera error:",
-            error
+        "Camera error:",
+        error
         );
 
 
         alert(
-            "Unable to access camera. Please allow camera permissions."
+        "Please allow camera access to use the photobooth."
         );
 
+
+        return false;
+
+
     }
+
 
 }
 
@@ -237,7 +295,9 @@ async function startCamera(){
 
 function stopCamera(){
 
+
     if(currentStream){
+
 
         currentStream
         .getTracks()
@@ -250,135 +310,163 @@ function stopCamera(){
 
         currentStream = null;
 
+
     }
+
 
 
     camera.srcObject = null;
 
+
 }
 
 
+
 // ==================================================
-// CAMERA SWITCH
+// SWITCH CAMERA
 // ==================================================
 
 switchCameraBtn.addEventListener(
-    "click",
-    async()=>{
+"click",
+async()=>{
 
 
-        facingMode =
-        facingMode === "user"
-        ? "environment"
-        : "user";
+    facingMode =
+    facingMode === "user"
+    ? "environment"
+    : "user";
 
 
-        await startCamera();
+    await startCamera();
 
 
-    }
-);
+});
 
-
-// ==================================================
-// CANCEL SESSION
-// ==================================================
-
-cancelSessionBtn.addEventListener(
-    "click",
-    ()=>{
-
-
-        stopCamera();
-
-
-        sessionActive = false;
-
-        capturedPhotos = [];
-
-        photoIndex = 0;
-
-
-        showScreen(
-            welcomeScreen
-        );
-
-
-    }
-);
 
 
 // ==================================================
-// START SESSION
+// START BUTTON FIX
 // ==================================================
 
 startBtn.addEventListener(
-    "click",
-    async()=>{
+"click",
+async()=>{
 
 
-        selectedTheme =
-        themeSelector.value;
+    selectedTheme =
+    themeSelector.value;
 
 
-        selectedLayout =
-        layoutSelector.value;
+    selectedLayout =
+    layoutSelector.value;
 
 
-        selectedFilter =
-        filterSelector.value;
+    selectedFilter =
+    filterSelector.value;
 
 
-        document.body.className =
-        "theme-" + selectedTheme;
+
+    document.body.className =
+    "theme-" + selectedTheme;
 
 
-        capturedPhotos = [];
 
-        photoIndex = 0;
+    capturedPhotos = [];
 
-        sessionActive = true;
+    finalImage = null;
 
+    photoIndex = 0;
 
-        progressFill.style.width =
-        "0%";
-
-
-        photoCounter.textContent =
-        "Photo 1 / 4";
+    sessionActive = true;
 
 
-        showScreen(
-            cameraScreen
-        );
+
+    progressFill.style.width =
+    "0%";
 
 
-        await startCamera();
+    photoCounter.textContent =
+    "Photo 1 / 4";
+
+
+
+    showScreen(
+        cameraScreen
+    );
+
+
+
+    const started =
+    await startCamera();
+
+
+
+    if(started){
 
 
         beginPhotoSequence();
 
 
     }
-);
+    else{
+
+
+        showScreen(
+        welcomeScreen
+        );
+
+
+    }
+
+
+});
+
+
+
+// ==================================================
+// CANCEL
+// ==================================================
+
+cancelSessionBtn.addEventListener(
+"click",
+()=>{
+
+
+    sessionActive = false;
+
+
+    stopCamera();
+
+
+    resetSession();
+
+
+    showScreen(
+    welcomeScreen
+    );
+
+
+});
 /*
 ==================================================
 DIGITAL PHOTOBOOTH
-Version 2.0.2 Alpha
+Version 2.0.3 Alpha
 PART 2 / 4
 ==================================================
 */
 
 
 // ==================================================
-// PHOTO SEQUENCE CONTROLLER
+// PHOTO SEQUENCE
 // ==================================================
 
 async function beginPhotoSequence(){
 
+
     if(!sessionActive){
         return;
     }
+
 
 
     for(
@@ -387,11 +475,20 @@ async function beginPhotoSequence(){
         photoIndex++
     ){
 
+
+        if(!sessionActive){
+            return;
+        }
+
+
+
         photoCounter.textContent =
         `Photo ${photoIndex + 1} / 4`;
 
 
-        await runCountdown();
+
+        await countdown();
+
 
 
         if(!sessionActive){
@@ -399,50 +496,62 @@ async function beginPhotoSequence(){
         }
 
 
-        capturePhoto();
+
+        await capturePhoto();
+
 
 
         updateProgress();
 
 
+
         await wait(1200);
+
 
     }
 
 
-    await finishCaptureSequence();
+
+    finishCapture();
+
 
 }
 
 
 
 // ==================================================
-// COUNTDOWN SYSTEM
+// COUNTDOWN
 // ==================================================
 
-function runCountdown(){
+function countdown(){
+
 
     return new Promise(resolve=>{
 
 
-        let count = 3;
+        let number = 3;
+
 
 
         countdownDisplay.textContent =
-        count;
+        number;
+
 
 
         const timer =
         setInterval(()=>{
 
 
-            count--;
+            number--;
 
 
-            if(count > 0){
+
+            if(number > 0){
+
 
                 countdownDisplay.textContent =
-                count;
+                number;
+
 
             }
             else{
@@ -457,81 +566,111 @@ function runCountdown(){
 
                 resolve();
 
+
             }
 
 
         },1000);
 
 
+
     });
+
 
 }
 
 
 
 // ==================================================
-// PHOTO CAPTURE
+// CAPTURE PHOTO
 // ==================================================
 
-function capturePhoto(){
+async function capturePhoto(){
+
+
+    if(captureLock){
+        return;
+    }
+
+
+    captureLock = true;
+
 
 
     const canvas =
     document.createElement("canvas");
 
 
-    const context =
-    canvas.getContext("2d");
 
-
-    canvas.width =
+    const width =
     camera.videoWidth;
 
 
-    canvas.height =
+    const height =
     camera.videoHeight;
 
 
 
-    context.save();
+    canvas.width =
+    width;
+
+
+    canvas.height =
+    height;
 
 
 
-    /*
-    Mirror front camera
-    */
+    const ctx =
+    canvas.getContext(
+        "2d",
+        {
+            willReadFrequently:true
+        }
+    );
+
+
+
+    ctx.save();
+
+
+
+    // Front camera mirror correction
 
     if(facingMode === "user"){
 
-        context.translate(
-            canvas.width,
+
+        ctx.translate(
+            width,
             0
         );
 
-        context.scale(
+
+        ctx.scale(
             -1,
             1
         );
+
 
     }
 
 
 
-    context.drawImage(
+    ctx.drawImage(
         camera,
         0,
         0,
-        canvas.width,
-        canvas.height
+        width,
+        height
     );
 
 
-    context.restore();
+
+    ctx.restore();
 
 
 
-    applyCanvasFilter(
-        context,
+    applyFilter(
+        ctx,
         canvas
     );
 
@@ -550,10 +689,15 @@ function capturePhoto(){
     );
 
 
+
     triggerFlash();
 
 
     playShutter();
+
+
+
+    captureLock = false;
 
 
 }
@@ -561,10 +705,10 @@ function capturePhoto(){
 
 
 // ==================================================
-// FILTER ENGINE
+// FILTER SYSTEM
 // ==================================================
 
-function applyCanvasFilter(
+function applyFilter(
     ctx,
     canvas
 ){
@@ -573,6 +717,7 @@ function applyCanvasFilter(
     if(selectedFilter === "none"){
         return;
     }
+
 
 
     const imageData =
@@ -584,120 +729,137 @@ function applyCanvasFilter(
     );
 
 
-    const data =
+
+    const pixels =
     imageData.data;
 
 
 
     for(
         let i = 0;
-        i < data.length;
+        i < pixels.length;
         i += 4
     ){
 
 
         let r =
-        data[i];
+        pixels[i];
 
 
         let g =
-        data[i+1];
+        pixels[i+1];
 
 
         let b =
-        data[i+2];
+        pixels[i+2];
 
 
 
-        if(selectedFilter === "bw"){
-
-
-            const gray =
-            (r + g + b) / 3;
-
-
-            data[i] =
-            gray;
-
-
-            data[i+1] =
-            gray;
-
-
-            data[i+2] =
-            gray;
-
-
-        }
+        switch(selectedFilter){
 
 
 
-        else if(selectedFilter === "warm"){
+            case "bw":
 
 
-            data[i] =
-            Math.min(
-                255,
-                r + 25
-            );
+                let gray =
+                (r + g + b) / 3;
 
 
-            data[i+1] =
-            Math.min(
-                255,
-                g + 10
-            );
+                pixels[i] =
+                gray;
 
 
-            data[i+2] =
-            Math.max(
-                0,
-                b - 15
-            );
+                pixels[i+1] =
+                gray;
 
 
-        }
+                pixels[i+2] =
+                gray;
+
+
+            break;
 
 
 
-        else if(selectedFilter === "cool"){
+            case "warm":
 
 
-            data[i] =
-            Math.max(
-                0,
-                r - 15
-            );
+                pixels[i] =
+                Math.min(
+                    255,
+                    r + 25
+                );
 
 
-            data[i+1] =
-            g + 5;
+                pixels[i+1] =
+                Math.min(
+                    255,
+                    g + 12
+                );
 
 
-            data[i+2] =
-            Math.min(
-                255,
-                b + 25
-            );
+                pixels[i+2] =
+                Math.max(
+                    0,
+                    b - 20
+                );
 
 
-        }
+            break;
 
 
 
-        else if(selectedFilter === "vintage"){
+            case "cool":
 
 
-            data[i] =
-            r * 0.9 + 30;
+                pixels[i] =
+                Math.max(
+                    0,
+                    r - 15
+                );
 
 
-            data[i+1] =
-            g * 0.85 + 25;
+                pixels[i+1] =
+                g;
 
 
-            data[i+2] =
-            b * 0.7 + 10;
+                pixels[i+2] =
+                Math.min(
+                    255,
+                    b + 25
+                );
+
+
+            break;
+
+
+
+            case "vintage":
+
+
+                pixels[i] =
+                Math.min(
+                    255,
+                    r * 0.9 + 35
+                );
+
+
+                pixels[i+1] =
+                Math.min(
+                    255,
+                    g * 0.85 + 25
+                );
+
+
+                pixels[i+2] =
+                Math.min(
+                    255,
+                    b * 0.7 + 10
+                );
+
+
+            break;
 
 
         }
@@ -719,7 +881,7 @@ function applyCanvasFilter(
 
 
 // ==================================================
-// FLASH EFFECT
+// FLASH
 // ==================================================
 
 function triggerFlash(){
@@ -743,24 +905,24 @@ function triggerFlash(){
 
 
 // ==================================================
-// SHUTTER SOUND
+// SHUTTER
 // ==================================================
 
 function playShutter(){
 
 
-    if(shutter){
-
-
-        shutter.currentTime =
-        0;
-
-
-        shutter.play()
-        .catch(()=>{});
-
-
+    if(!shutter){
+        return;
     }
+
+
+
+    shutter.currentTime = 0;
+
+
+
+    shutter.play()
+    .catch(()=>{});
 
 
 }
@@ -768,13 +930,13 @@ function playShutter(){
 
 
 // ==================================================
-// PROGRESS BAR
+// PROGRESS
 // ==================================================
 
 function updateProgress(){
 
 
-    const progress =
+    const value =
     (
         capturedPhotos.length / 4
     ) * 100;
@@ -782,7 +944,7 @@ function updateProgress(){
 
 
     progressFill.style.width =
-    progress + "%";
+    value + "%";
 
 
 }
@@ -790,30 +952,10 @@ function updateProgress(){
 
 
 // ==================================================
-// WAIT HELPER
+// COMPLETE CAPTURE
 // ==================================================
 
-function wait(ms){
-
-
-    return new Promise(
-        resolve =>
-        setTimeout(
-            resolve,
-            ms
-        )
-    );
-
-
-}
-
-
-
-// ==================================================
-// AFTER 4 PHOTOS
-// ==================================================
-
-async function finishCaptureSequence(){
+async function finishCapture(){
 
 
     stopCamera();
@@ -840,7 +982,7 @@ async function finishCaptureSequence(){
 
 
 
-    await wait(1500);
+    await wait(1200);
 
 
 
@@ -848,32 +990,24 @@ async function finishCaptureSequence(){
 
 
 }
-/*
-==================================================
-DIGITAL PHOTOBOOTH
-Version 2.0.2 Alpha
-PART 3 / 4
-==================================================
-*/
+
 
 
 // ==================================================
-// CONTACT SHEET PREVIEW
+// PREVIEW
 // ==================================================
 
 function loadPreview(){
 
 
     previewImages.forEach(
-        (img,index)=>{
+        (image,index)=>{
 
 
-            if(capturedPhotos[index]){
-
-                img.src =
-                capturedPhotos[index];
-
-            }
+            image.src =
+            capturedPhotos[index]
+            ||
+            "";
 
 
         }
@@ -885,7 +1019,33 @@ function loadPreview(){
 
 
 // ==================================================
-// EXPORT ENGINE
+// WAIT
+// ==================================================
+
+function wait(ms){
+
+
+    return new Promise(
+        resolve=>
+        setTimeout(
+            resolve,
+            ms
+        )
+    );
+
+
+}
+/*
+==================================================
+DIGITAL PHOTOBOOTH
+Version 2.0.3 Alpha
+PART 3 / 4
+==================================================
+*/
+
+
+// ==================================================
+// EXPORT CREATION
 // ==================================================
 
 async function createFinalExport(){
@@ -906,23 +1066,34 @@ async function createFinalExport(){
     exportCanvas;
 
 
-
     const ctx =
     canvas.getContext("2d");
 
 
 
-    const width =
-    selectedLayout === "strip"
-    ? 900
-    : 1200;
+    let width;
+    let height;
 
 
 
-    const height =
-    selectedLayout === "strip"
-    ? 2600
-    : 1200;
+    if(selectedLayout === "strip"){
+
+
+        width = 900;
+
+        height = 2800;
+
+
+    }
+    else{
+
+
+        width = 1400;
+
+        height = 1400;
+
+
+    }
 
 
 
@@ -935,7 +1106,7 @@ async function createFinalExport(){
 
 
 
-    drawBackground(
+    drawCanvasBackground(
         ctx,
         width,
         height
@@ -946,11 +1117,10 @@ async function createFinalExport(){
     if(selectedLayout === "strip"){
 
 
-        drawStrip(
+        drawPhotoStrip(
             ctx,
             images,
-            width,
-            height
+            width
         );
 
 
@@ -958,11 +1128,10 @@ async function createFinalExport(){
     else{
 
 
-        drawGrid(
+        drawPhotoGrid(
             ctx,
             images,
-            width,
-            height
+            width
         );
 
 
@@ -989,28 +1158,23 @@ async function createFinalExport(){
     preparePrinter();
 
 
-
 }
 
 
 
 // ==================================================
-// CANVAS BACKGROUND
+// BACKGROUND THEMES
 // ==================================================
 
-function drawBackground(
+function drawCanvasBackground(
     ctx,
     width,
     height
 ){
 
 
-    let color =
-    "#ffffff";
+    const backgrounds = {
 
-
-
-    const themeColors = {
 
         classic:"#ffffff",
 
@@ -1024,19 +1188,16 @@ function drawBackground(
 
         cream:"#fffaf0"
 
+
     };
 
 
 
-    color =
-    themeColors[selectedTheme]
-    ||
-    color;
-
-
-
     ctx.fillStyle =
-    color;
+    backgrounds[selectedTheme]
+    ||
+    "#ffffff";
+
 
 
     ctx.fillRect(
@@ -1052,28 +1213,24 @@ function drawBackground(
 
 
 // ==================================================
-// STRIP EXPORT
+// PHOTO STRIP
 // ==================================================
 
-function drawStrip(
+function drawPhotoStrip(
     ctx,
     images,
-    width,
-    height
+    width
 ){
 
 
-    const padding =
-    80;
+    const padding = 80;
 
 
     const photoWidth =
-    width - (padding * 2);
+    width - padding * 2;
 
 
-
-    const photoHeight =
-    480;
+    const photoHeight = 560;
 
 
 
@@ -1083,12 +1240,9 @@ function drawStrip(
 
             const y =
             padding +
+            index *
             (
-                index *
-                (
-                    photoHeight +
-                    70
-                )
+                photoHeight + 70
             );
 
 
@@ -1107,7 +1261,6 @@ function drawStrip(
     );
 
 
-
 }
 
 
@@ -1116,26 +1269,22 @@ function drawStrip(
 // GRID EXPORT
 // ==================================================
 
-function drawGrid(
+function drawPhotoGrid(
     ctx,
     images,
-    width,
-    height
+    width
 ){
 
 
-    const padding =
-    80;
+    const padding = 80;
 
-
-    const gap =
-    40;
+    const gap = 40;
 
 
     const size =
     (
         width -
-        (padding * 2) -
+        padding * 2 -
         gap
     ) / 2;
 
@@ -1150,30 +1299,25 @@ function drawGrid(
 
 
             const row =
-            Math.floor(index / 2);
+            Math.floor(
+                index / 2
+            );
 
 
 
             const x =
             padding +
+            column *
             (
-                column *
-                (
-                    size +
-                    gap
-                )
+                size + gap
             );
-
 
 
             const y =
             padding +
+            row *
             (
-                row *
-                (
-                    size +
-                    gap
-                )
+                size + gap
             );
 
 
@@ -1197,7 +1341,7 @@ function drawGrid(
 
 
 // ==================================================
-// IMAGE COVER DRAWING
+// SAFARI SAFE IMAGE DRAW
 // ==================================================
 
 function drawImageCover(
@@ -1218,19 +1362,21 @@ function drawImageCover(
 
 
 
-    const newWidth =
-    img.width * ratio;
+    const renderWidth =
+    img.width *
+    ratio;
 
 
-    const newHeight =
-    img.height * ratio;
+    const renderHeight =
+    img.height *
+    ratio;
 
 
 
     const offsetX =
     (
         width -
-        newWidth
+        renderWidth
     ) / 2;
 
 
@@ -1238,7 +1384,7 @@ function drawImageCover(
     const offsetY =
     (
         height -
-        newHeight
+        renderHeight
     ) / 2;
 
 
@@ -1246,16 +1392,16 @@ function drawImageCover(
     ctx.save();
 
 
-    ctx.beginPath();
 
-
-    ctx.roundRect(
+    roundedRectangle(
+        ctx,
         x,
         y,
         width,
         height,
         24
     );
+
 
 
     ctx.clip();
@@ -1266,12 +1412,100 @@ function drawImageCover(
         img,
         x + offsetX,
         y + offsetY,
-        newWidth,
-        newHeight
+        renderWidth,
+        renderHeight
     );
 
 
+
     ctx.restore();
+
+
+}
+
+
+
+// ==================================================
+// ROUNDED RECTANGLE FIX
+// ==================================================
+
+function roundedRectangle(
+    ctx,
+    x,
+    y,
+    width,
+    height,
+    radius
+){
+
+
+    ctx.beginPath();
+
+
+
+    ctx.moveTo(
+        x + radius,
+        y
+    );
+
+
+    ctx.lineTo(
+        x + width - radius,
+        y
+    );
+
+
+    ctx.quadraticCurveTo(
+        x + width,
+        y,
+        x + width,
+        y + radius
+    );
+
+
+    ctx.lineTo(
+        x + width,
+        y + height - radius
+    );
+
+
+    ctx.quadraticCurveTo(
+        x + width,
+        y + height,
+        x + width - radius,
+        y + height
+    );
+
+
+    ctx.lineTo(
+        x + radius,
+        y + height
+    );
+
+
+    ctx.quadraticCurveTo(
+        x,
+        y + height,
+        x,
+        y + height - radius
+    );
+
+
+    ctx.lineTo(
+        x,
+        y + radius
+    );
+
+
+    ctx.quadraticCurveTo(
+        x,
+        y,
+        x + radius,
+        y
+    );
+
+
+    ctx.closePath();
 
 
 }
@@ -1292,17 +1526,19 @@ function drawWatermark(
     ctx.save();
 
 
+
     ctx.font =
-    "bold 42px Arial";
-
-
-    ctx.fillStyle =
-    "rgba(0,0,0,0.35)";
+    "bold 44px Arial";
 
 
 
     ctx.textAlign =
     "center";
+
+
+
+    ctx.fillStyle =
+    "rgba(0,0,0,0.35)";
 
 
 
@@ -1322,7 +1558,7 @@ function drawWatermark(
 
 
 // ==================================================
-// LOAD IMAGE HELPER
+// IMAGE LOADER
 // ==================================================
 
 function loadImage(src){
@@ -1336,8 +1572,10 @@ function loadImage(src){
             new Image();
 
 
+
             img.onload =
             ()=>resolve(img);
+
 
 
             img.src =
@@ -1352,17 +1590,23 @@ function loadImage(src){
 /*
 ==================================================
 DIGITAL PHOTOBOOTH
-Version 2.0.2 Alpha
+Version 2.0.3 Alpha
 PART 4 / 4
 ==================================================
 */
 
 
 // ==================================================
-// PRINTER PREPARATION
+// PRINTER ANIMATION
 // ==================================================
 
 function preparePrinter(){
+
+
+    if(!finalImage){
+        return;
+    }
+
 
 
     printPreview.src =
@@ -1375,6 +1619,7 @@ function preparePrinter(){
     );
 
 
+
     printingStatus.textContent =
     "Printing...";
 
@@ -1384,10 +1629,21 @@ function preparePrinter(){
 
 
         printingStatus.textContent =
-        "Almost ready...";
+        "Developing photo...";
 
 
-    },1500);
+    },1200);
+
+
+
+    setTimeout(()=>{
+
+
+        printingStatus.textContent =
+        "Complete!";
+
+
+    },2400);
 
 
 
@@ -1426,99 +1682,111 @@ function showResult(){
 
 
 // ==================================================
-// DOWNLOAD IMAGE
+// DOWNLOAD
 // ==================================================
 
 downloadBtn.addEventListener(
-    "click",
-    ()=>{
+"click",
+()=>{
 
 
-        if(!finalImage){
-            return;
-        }
-
-
-
-        const link =
-        document.createElement(
-            "a"
-        );
-
-
-        link.href =
-        finalImage;
-
-
-        link.download =
-        "digital-photobooth.jpg";
-
-
-
-        document.body.appendChild(
-            link
-        );
-
-
-        link.click();
-
-
-
-        document.body.removeChild(
-            link
-        );
-
-
+    if(!finalImage){
+        return;
     }
-);
+
+
+
+    const link =
+    document.createElement(
+        "a"
+    );
+
+
+
+    link.href =
+    finalImage;
+
+
+
+    link.download =
+    "digital-photobooth-photo.jpg";
+
+
+
+    document.body.appendChild(
+        link
+    );
+
+
+
+    link.click();
+
+
+
+    link.remove();
+
+
+});
 
 
 
 // ==================================================
-// RETAKE SESSION
+// RETAKE
 // ==================================================
 
 retakeBtn.addEventListener(
-    "click",
-    async()=>{
+"click",
+async()=>{
 
 
-        capturedPhotos = [];
-
-        finalImage = null;
-
-        photoIndex = 0;
-
-
-        progressFill.style.width =
-        "0%";
+    stopCamera();
 
 
 
-        photoCounter.textContent =
-        "Photo 1 / 4";
+    capturedPhotos = [];
+
+    finalImage = null;
+
+    photoIndex = 0;
 
 
 
-        sessionActive = true;
+    progressFill.style.width =
+    "0%";
 
 
 
-        showScreen(
-            cameraScreen
-        );
+    photoCounter.textContent =
+    "Photo 1 / 4";
 
 
 
-        await startCamera();
+    sessionActive = true;
 
+
+
+    showScreen(
+        cameraScreen
+    );
+
+
+
+    const started =
+    await startCamera();
+
+
+
+    if(started){
 
 
         beginPhotoSequence();
 
 
     }
-);
+
+
+
+});
 
 
 
@@ -1527,26 +1795,25 @@ retakeBtn.addEventListener(
 // ==================================================
 
 newSessionBtn.addEventListener(
-    "click",
-    ()=>{
+"click",
+()=>{
 
 
-        resetSession();
+    resetSession();
 
 
 
-        showScreen(
-            welcomeScreen
-        );
+    showScreen(
+        welcomeScreen
+    );
 
 
-    }
-);
+});
 
 
 
 // ==================================================
-// SESSION RESET
+// RESET
 // ==================================================
 
 function resetSession(){
@@ -1563,33 +1830,45 @@ function resetSession(){
     photoIndex = 0;
 
 
+
     sessionActive = false;
 
 
 
-    previewImages.forEach(
-        img=>{
+    captureLock = false;
 
-            img.src = "";
+
+
+    previewImages.forEach(
+        image=>{
+
+
+            image.src =
+            "";
+
 
         }
     );
 
 
 
-    resultImage.src = "";
-
-    printPreview.src = "";
-
+    resultImage.src =
+    "";
 
 
-    progressFill.style.width =
-    "0%";
+
+    printPreview.src =
+    "";
 
 
 
     countdownDisplay.textContent =
     "";
+
+
+
+    progressFill.style.width =
+    "0%";
 
 
 
@@ -1602,56 +1881,37 @@ function resetSession(){
 
 
 // ==================================================
-// SAFARI PAGE CLEANUP
+// CLEANUP
 // ==================================================
 
 window.addEventListener(
-    "pagehide",
-    ()=>{
+"pagehide",
+()=>{
 
 
-        stopCamera();
+    stopCamera();
 
 
-    }
-);
+});
 
 
-
-// ==================================================
-// PREVENT MEMORY LEAKS
-// ==================================================
 
 window.addEventListener(
-    "beforeunload",
-    ()=>{
+"beforeunload",
+()=>{
 
 
-        stopCamera();
+    stopCamera();
 
 
-    }
-);
+});
 
 
 
 // ==================================================
-// INITIAL STATE
+// INITIAL LOAD
 // ==================================================
 
-document.addEventListener(
-    "DOMContentLoaded",
-    ()=>{
-
-
-        document.body.className =
-        "theme-classic";
-
-
-        showScreen(
-            welcomeScreen
-        );
-
-
-    }
+showScreen(
+    welcomeScreen
 );
