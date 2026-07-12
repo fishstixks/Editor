@@ -6,28 +6,30 @@
   <title>Digital Photobooth</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body class="bg-slate-950 text-white p-4">
-  <div class="max-w-md mx-auto bg-slate-900 p-6 rounded-3xl border border-slate-800">
-    <h1 class="text-2xl font-bold text-center mb-6">📸 Photobooth Studio</h1>
-    <div class="space-y-4">
-      <select id="layout" class="w-full p-3 bg-slate-800 rounded-xl text-white">
-        <option value="strip">4-Photo Vertical Strip</option>
-        <option value="grid">2x2 Square Grid</option>
-      </select>
-      <button id="cameraBtn" class="w-full py-4 bg-blue-600 rounded-xl font-bold hover:bg-blue-500 transition">Pick Photos</button>
-      <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
-      
-      <canvas id="boothCanvas" class="hidden"></canvas>
-      <div id="preview" class="mt-4 border-2 border-slate-700 rounded-xl overflow-hidden hidden"></div>
-      
-      <div id="qrArea" class="hidden flex flex-col items-center mt-4">
-        <p class="text-sm text-slate-400 mb-2">Scan to retrieve photos:</p>
-        <img id="qrCode" class="bg-white p-2 rounded-lg" src="" alt="QR Code">
-      </div>
+<body class="bg-slate-950 text-white min-h-screen flex items-center justify-center p-4">
 
-      <button id="downloadBtn" class="hidden w-full py-4 bg-green-600 rounded-xl font-bold">Download Photo</button>
-    </div>
+  <div id="welcomeScreen" class="max-w-md w-full bg-slate-900 p-8 rounded-3xl border border-slate-800 text-center">
+    <h1 class="text-3xl font-black mb-6 text-blue-400">Welcome!</h1>
+    <p class="mb-8 text-slate-400">Select your booth style to begin.</p>
+    <select id="layout" class="w-full p-4 bg-slate-800 rounded-xl mb-6">
+      <option value="strip">4-Photo Vertical Strip</option>
+      <option value="grid">2x2 Square Grid</option>
+    </select>
+    <button id="startBtn" class="w-full py-4 bg-blue-600 rounded-xl font-bold hover:bg-blue-500">Start Session</button>
   </div>
+
+  <div id="boothScreen" class="hidden max-w-md w-full bg-slate-900 p-6 rounded-3xl border border-slate-800 text-center">
+    <h2 class="text-xl font-bold mb-4">Capture 4 Photos</h2>
+    <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
+    <div id="status" class="mb-4 text-blue-400 font-mono">Waiting for media...</div>
+    <div id="preview" class="border-2 border-slate-700 rounded-xl overflow-hidden hidden"></div>
+    <div id="printAnim" class="hidden text-2xl py-10 animate-pulse text-yellow-400 font-bold">PRINTING...</div>
+    <div id="qrArea" class="hidden mt-4">
+      <img id="qrCode" class="bg-white p-2 rounded-lg mx-auto" src="">
+    </div>
+    <button id="downloadBtn" class="hidden mt-4 w-full py-4 bg-green-600 rounded-xl font-bold">Save Photo</button>
+  </div>
+
   <script src="photobooth.js"></script>
 </body>
 </html>
