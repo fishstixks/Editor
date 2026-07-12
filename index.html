@@ -7,25 +7,47 @@
 
 <meta
 name="viewport"
-content="width=device-width, initial-scale=1.0,viewport-fit=cover">
+content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>Digital Photobooth v2.0.1 Alpha</title>
+<title>Digital Photobooth v2.0.4 Alpha</title>
+
 
 <link
 rel="stylesheet"
-href="style.css?v=2.0.1">
+href="style.css">
+
 
 <meta
 name="theme-color"
 content="#111827">
 
+
+<meta
+name="apple-mobile-web-app-capable"
+content="yes">
+
+
+<meta
+name="apple-mobile-web-app-status-bar-style"
+content="black-translucent">
+
+
+<meta
+name="apple-mobile-web-app-title"
+content="Digital Photobooth">
+
+
 </head>
 
+
 <body class="theme-classic">
+
 
 <!-- Flash -->
 
 <div id="flash"></div>
+
+
 
 <!-- Hidden canvas used for exporting -->
 
@@ -34,82 +56,154 @@ id="exportCanvas"
 hidden>
 </canvas>
 
+
+
 <!-- ======================================
 WELCOME
 ====================================== -->
+
 
 <section
 id="welcomeScreen"
 class="screen active">
 
+
 <div class="card">
 
-<h1>📸 Digital Photobooth</h1>
 
-<p>Create your own premium photostrip.</p>
+<h1>
+📸 Digital Photobooth
+</h1>
+
+
+<p>
+Create your own premium photostrip.
+</p>
+
+
 
 <label>
 Theme
 </label>
 
+
 <select id="theme">
 
-<option value="classic">Classic White</option>
-<option value="black">Midnight</option>
-<option value="pink">Cherry Blossom</option>
-<option value="blue">Ocean</option>
-<option value="mint">Mint</option>
-<option value="cream">Cream</option>
+<option value="classic">
+Classic White
+</option>
+
+<option value="black">
+Midnight
+</option>
+
+<option value="pink">
+Cherry Blossom
+</option>
+
+<option value="blue">
+Ocean
+</option>
+
+<option value="mint">
+Mint
+</option>
+
+<option value="cream">
+Cream
+</option>
 
 </select>
+
+
 
 <label>
 Layout
 </label>
 
+
 <select id="layout">
+
 
 <option value="strip">
 4 Photo Strip
 </option>
 
+
 <option value="grid">
 2 × 2 Grid
 </option>
 
+
 </select>
+
+
 
 <label>
 Filter
 </label>
 
+
 <select id="filter">
 
-<option value="none">Normal</option>
-<option value="bw">Black & White</option>
-<option value="warm">Warm</option>
-<option value="cool">Cool</option>
-<option value="vintage">Vintage</option>
+
+<option value="none">
+Normal
+</option>
+
+
+<option value="bw">
+Black & White
+</option>
+
+
+<option value="warm">
+Warm
+</option>
+
+
+<option value="cool">
+Cool
+</option>
+
+
+<option value="vintage">
+Vintage
+</option>
+
 
 </select>
 
+
+
 <button id="startBtn">
+
 Start Session
+
 </button>
+
 
 </div>
 
+
 </section>
+
+
+
+
 
 <!-- ======================================
 CAMERA
 ====================================== -->
 
+
 <section
 id="cameraScreen"
 class="screen">
 
+
 <div class="cameraContainer">
+
 
 <video
 id="camera"
@@ -118,163 +212,295 @@ playsinline
 muted>
 </video>
 
+
+
+<p
+id="cameraError"
+hidden>
+
+Camera access unavailable.
+
+</p>
+
+
+
 <div id="countdown">
+
 3
+
 </div>
+
+
 
 <div id="photoCounter">
+
 Photo 1 / 4
+
 </div>
 
+
+
 <div id="progressBar">
+
 <div id="progressFill"></div>
+
 </div>
+
+
 
 <div id="topBar">
 
-<button id="switchCamera">
+
+<button
+id="switchCamera">
+
 🔄
+
 </button>
 
-<button id="cancelSession">
+
+
+<button
+id="cancelSession">
+
 ✕
+
 </button>
 
-</div>
+
 
 </div>
+
+
+</div>
+
 
 </section>
+
+
+
+
 
 <!-- ======================================
 PHOTO PREVIEW
 ====================================== -->
 
+
 <section
 id="previewScreen"
 class="screen">
 
+
 <div class="previewCard">
 
-<h2>Your Photos</h2>
+
+<h2>
+Your Photos
+</h2>
+
+
 
 <div id="previewGrid">
 
+
 <img id="preview1">
+
 <img id="preview2">
+
 <img id="preview3">
+
 <img id="preview4">
 
+
 </div>
+
+
 
 <p>
+
 Preparing your photostrip...
+
 </p>
+
 
 </div>
 
+
 </section>
+
+
+
+
 
 <!-- ======================================
 PROCESSING
 ====================================== -->
 
+
 <section
 id="processingScreen"
 class="screen">
 
+
 <div class="card">
 
+
 <h2>
+
 Processing...
+
 </h2>
 
-<div class="loader"></div>
 
-<p>
-Creating your photostrip
-</p>
+
+<div class="loader">
 
 </div>
 
+
+
+<p>
+
+Creating your photostrip
+
+</p>
+
+
+</div>
+
+
 </section>
+
+
+
+
 
 <!-- ======================================
 PRINTING
 ====================================== -->
 
+
 <section
 id="printingScreen"
 class="screen">
 
+
 <div class="printer">
 
+
 <div class="printerTop">
+
 DIGITAL PHOTOBOOTH
+
 </div>
 
+
+
 <div class="paperArea">
+
 
 <img
 id="printPreview">
 
-</div>
 
 </div>
 
-<p id="printingStatus">
+
+</div>
+
+
+
+<p
+id="printingStatus">
+
 Printing...
+
 </p>
 
+
 </section>
+
+
+
+
 
 <!-- ======================================
 RESULT
 ====================================== -->
 
+
 <section
 id="resultScreen"
 class="screen">
 
+
 <img
 id="resultImage">
 
+
+
 <div class="buttons">
+
 
 <button
 id="downloadBtn">
+
 Download
+
 </button>
+
+
 
 <button
 id="retakeBtn">
+
 Retake
+
 </button>
+
+
 
 <button
 id="newSession">
+
 New Session
+
 </button>
+
+
 
 </div>
 
+
 </section>
 
+
+
+
+
 <!-- Hidden shutter sound -->
+
 
 <audio
 id="shutter"
 preload="auto">
 
+
 <source
 src="assets/shutter.mp3"
 type="audio/mpeg">
 
+
 </audio>
 
+
+
+
 <script
-src="photobooth.js?v=2.0.1">
+src="photobooth.js">
+
 </script>
+
 
 </body>
 
