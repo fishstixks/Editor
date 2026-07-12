@@ -9,22 +9,25 @@
 <body class="bg-slate-950 text-white p-4">
   <div class="max-w-md mx-auto bg-slate-900 p-6 rounded-3xl border border-slate-800">
     <h1 class="text-2xl font-bold text-center mb-6">📸 Photobooth Studio</h1>
-    
     <div class="space-y-4">
-      <select id="layout" class="w-full p-3 bg-slate-800 rounded-xl">
+      <select id="layout" class="w-full p-3 bg-slate-800 rounded-xl text-white">
         <option value="strip">4-Photo Vertical Strip</option>
         <option value="grid">2x2 Square Grid</option>
       </select>
-
-      <button id="cameraBtn" class="w-full py-4 bg-blue-600 rounded-xl font-bold">Open Camera / Select</button>
+      <button id="cameraBtn" class="w-full py-4 bg-blue-600 rounded-xl font-bold hover:bg-blue-500 transition">Pick Photos</button>
       <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
       
       <canvas id="boothCanvas" class="hidden"></canvas>
       <div id="preview" class="mt-4 border-2 border-slate-700 rounded-xl overflow-hidden hidden"></div>
       
-      <button id="downloadBtn" class="hidden w-full py-4 bg-green-600 rounded-xl font-bold">Download / Save Photo</button>
+      <div id="qrArea" class="hidden flex flex-col items-center mt-4">
+        <p class="text-sm text-slate-400 mb-2">Scan to retrieve photos:</p>
+        <img id="qrCode" class="bg-white p-2 rounded-lg" src="" alt="QR Code">
+      </div>
+
+      <button id="downloadBtn" class="hidden w-full py-4 bg-green-600 rounded-xl font-bold">Download Photo</button>
     </div>
   </div>
-  <script src="photobooth.js"></script>
+  <script src="photobooth.js?v=3"></script>
 </body>
 </html>
