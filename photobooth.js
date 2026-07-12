@@ -1,6 +1,6 @@
 /* ============================================================
    DIGITAL PHOTOBOOTH
-   photobooth.js — Version 2.0.4 Alpha
+   photobooth.js — Version 2.0.6 Alpha
    Full build (Parts 1-4 combined)
    ============================================================ */
 
@@ -43,11 +43,12 @@
     "printingScreen", "resultScreen",
     "startBtn", "switchCamera", "cancelSession", "downloadBtn", "retakeBtn", "newSession",
     "camera", "countdown", "photoCounter", "progressFill", "flash", "shutter",
-    "theme", "layout", "filter",
+    "theme", "layout", "filter", "template",
+    "colourSwatches", "templateSwatches", "layoutSwatches", "filterSwatches",
     "preview1", "preview2", "preview3", "preview4",
     "exportCanvas",
     "printPreview", "printingStatus",
-    "resultImage",
+    "resultImage", "qrToggleBtn", "qrContainer",
   ];
 
   const el = {};
@@ -96,8 +97,10 @@
     photos: [],              // raw captured frames (data URLs, unfiltered)
     currentFilter: "normal",
     currentLayout: "strip",
-    currentTheme: "noir",
+    currentFrameColour: "cream",
+    currentTemplate: "classic",
     finalImageDataUrl: null,
+    showingQr: false,
     captureTimers: [],        // all pending timeouts, for cleanup
   };
 
@@ -110,6 +113,50 @@
     cool: "saturate(1.1) hue-rotate(-8deg) brightness(1.02) contrast(1.05)",
     vintage: "sepia(0.4) contrast(0.9) brightness(0.95) saturate(0.85)",
   };
+
+  // Frame colour options — these style ONLY the exported strip
+  // (background + accent border), never the site chrome itself.
+  const FRAME_COLOURS = {
+    cream: { bg: "#f7f3ee", accent: "rgba(13,11,20,0.15)", ink: "rgba(13,11,20,0.55)" },
+    blush: { bg: "#f6dde2", accent: "rgba(150,60,80,0.25)", ink: "rgba(90,30,45,0.6)" },
+    noir: { bg: "#17141c", accent: "rgba(255,255,255,0.18)", ink: "rgba(255,255,255,0.75)" },
+    gold: { bg: "#f1e6c9", accent: "rgba(140,105,30,0.3)", ink: "rgba(90,65,10,0.65)" },
+    mint: { bg: "#dcefe6", accent: "rgba(30,110,80,0.25)", ink: "rgba(15,70,50,0.6)" },
+    sky: { bg: "#dde9f7", accent: "rgba(40,80,140,0.25)", ink: "rgba(20,50,95,0.6)" },
+  };
+
+  // Template designs — decorations drawn on top of the composite.
+  // Emoji glyphs render natively via canvas fillText on iOS/Android,
+  // so no image assets are needed.
+  const TEMPLATES = {
+    classic: { label: "Classic", icon: "—", glyphs: [] },
+    blossom: { label: "Blossom", icon: "🌸", glyphs: ["🌸", "🌷", "🌸"] },
+    stars: { label: "Stars", icon: "✨", glyphs: ["✨", "⭐", "✨"] },
+    hearts: { label: "Hearts", icon: "💕", glyphs: ["💕", "💗", "💕"] },
+    confetti: { label: "Confetti", icon: "🎉", glyphs: ["🎉", "🎊", "✨"] },
+  };
+
+  const FRAME_COLOUR_SWATCHES = [
+    { id: "cream", hex: "#f7f3ee" },
+    { id: "blush", hex: "#f6dde2" },
+    { id: "noir", hex: "#17141c" },
+    { id: "gold", hex: "#e8cf8f" },
+    { id: "mint", hex: "#bfe3d0" },
+    { id: "sky", hex: "#bcd6f2" },
+  ];
+
+  const LAYOUT_OPTIONS = [
+    { id: "strip", icon: "▤", label: "Strip" },
+    { id: "grid", icon: "▦", label: "Grid" },
+  ];
+
+  const FILTER_OPTIONS = [
+    { id: "normal", icon: "◐", label: "Normal" },
+    { id: "bw", icon: "◑", label: "B&W" },
+    { id: "warm", icon: "◒", label: "Warm" },
+    { id: "cool", icon: "◓", label: "Cool" },
+    { id: "vintage", icon: "◔", label: "Vintage" },
+  ];
 
   /* ------------------------------------------------------------
      3. SCREEN MANAGEMENT
@@ -270,9 +317,10 @@
     if (el.startBtn) el.startBtn.disabled = true;
 
     // Read settings from the welcome screen before entering camera view.
-    if (el.theme && el.theme.value) applyTheme(el.theme.value);
+    if (el.theme && el.theme.value) applyFrameColour(el.theme.value);
     if (el.layout && el.layout.value) state.currentLayout = el.layout.value;
     if (el.filter && el.filter.value) state.currentFilter = el.filter.value;
+    if (el.template && el.template.value) state.currentTemplate = el.template.value;
 
     try {
       const started = await startCamera(state.facingMode);
@@ -313,10 +361,9 @@
     showScreen("welcomeScreen");
   }
 
-  function applyTheme(themeName) {
-    state.currentTheme = themeName;
-    document.body.setAttribute("data-theme", themeName);
-    log(`Theme applied: ${themeName}`);
+  function applyFrameColour(colourId) {
+    state.currentFrameColour = FRAME_COLOURS[colourId] ? colourId : "cream";
+    log(`Frame colour set: ${state.currentFrameColour} (applies to the printed strip only)`);
   }
 
   /* ------------------------------------------------------------
@@ -475,6 +522,8 @@
     const canvas = el.exportCanvas;
     const ctx = canvas.getContext("2d");
     const filterCss = FILTERS[state.currentFilter] || "none";
+    const colours = FRAME_COLOURS[state.currentFrameColour] || FRAME_COLOURS.cream;
+    const template = TEMPLATES[state.currentTemplate] || TEMPLATES.classic;
 
     const frameW = 900; // export resolution per photo cell (high-res)
     const frameH = 675;
@@ -505,8 +554,8 @@
     canvas.width = totalW;
     canvas.height = totalH;
 
-    // Background (paper-white strip look).
-    ctx.fillStyle = "#f7f3ee";
+    // Background — colour chosen by the user for this strip only.
+    ctx.fillStyle = colours.bg;
     ctx.fillRect(0, 0, totalW, totalH);
 
     let loaded = 0;
@@ -536,21 +585,52 @@
         ctx.drawImage(img, pos.x, pos.y, frameW, frameH);
         ctx.restore();
 
-        // thin frame around each cell
-        ctx.strokeStyle = "rgba(13,11,20,0.15)";
-        ctx.lineWidth = 2;
+        // thin frame around each cell, tinted to the chosen colour
+        ctx.strokeStyle = colours.accent;
+        ctx.lineWidth = 3;
         ctx.strokeRect(pos.x, pos.y, frameW, frameH);
       });
 
+      drawTemplateDecorations();
       drawWatermark();
       state.finalImageDataUrl = canvas.toDataURL("image/png");
       log("Final composite image built.");
       goToPrinting();
     }
 
+    // Scatters the template's glyphs (flowers, stars, hearts, confetti)
+    // along the outer border of the strip, like stickers on a real
+    // printed photobooth strip. "Classic" has no glyphs, so it's a no-op.
+    function drawTemplateDecorations() {
+      if (!template.glyphs || template.glyphs.length === 0) return;
+
+      ctx.save();
+      ctx.font = "34px serif"; // system emoji font renders regardless of family
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      const marginY = border / 2 + 4;
+      const spots = [];
+
+      // top border and bottom border, spaced evenly
+      const count = state.currentLayout === "grid" ? 5 : 4;
+      for (let i = 0; i < count; i++) {
+        const x = (totalW / (count + 1)) * (i + 1);
+        spots.push({ x, y: marginY });
+        spots.push({ x, y: totalH - marginY - (state.currentLayout === "strip" ? 60 : 0) });
+      }
+
+      spots.forEach((spot, i) => {
+        const glyph = template.glyphs[i % template.glyphs.length];
+        ctx.fillText(glyph, spot.x, spot.y);
+      });
+
+      ctx.restore();
+    }
+
     function drawWatermark() {
       ctx.save();
-      ctx.fillStyle = "rgba(13,11,20,0.55)";
+      ctx.fillStyle = colours.ink;
       ctx.font = "600 28px 'Songmyung', Georgia, serif";
       ctx.textAlign = "center";
       ctx.fillText("DIGITAL PHOTOBOOTH", totalW / 2, totalH - border / 2 - (state.currentLayout === "strip" ? 40 : 0));
@@ -583,30 +663,170 @@
     if (el.resultImage && state.finalImageDataUrl) {
       el.resultImage.src = state.finalImageDataUrl;
     }
+    state.showingQr = false;
+    if (el.qrContainer) { el.qrContainer.hidden = true; el.qrContainer.innerHTML = ""; }
+    if (el.resultImage) el.resultImage.hidden = false;
+    if (el.qrToggleBtn) el.qrToggleBtn.textContent = "View as QR code";
+    if (el.resultCaption) el.resultCaption.textContent = "Digital Photobooth · Fresh Print";
     showScreen("resultScreen");
+  }
+
+  /**
+   * Builds a small, heavily compressed thumbnail small enough to fit
+   * inside a QR code's data capacity (QR codes can hold a few KB at
+   * most — nowhere near enough for the full-resolution strip). This
+   * is a genuine technical ceiling: without a server to host the
+   * image and put a real link in the QR code, the code can only
+   * carry the image itself, so it's offered as a quick low-res
+   * "preview elsewhere" option, not a replacement for Download.
+   */
+  function buildQrThumbnail(sourceDataUrl) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = 260;
+        let quality = 0.5;
+        const attempt = () => {
+          const canvas = document.createElement("canvas");
+          const scale = width / img.width;
+          canvas.width = width;
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const out = canvas.toDataURL("image/jpeg", quality);
+
+          if (out.length < 2200 || (width <= 90 && quality <= 0.25)) {
+            resolve(out);
+            return;
+          }
+          // Still too big for a QR code — shrink further and retry.
+          if (quality > 0.25) {
+            quality -= 0.1;
+          } else {
+            width = Math.max(90, width - 40);
+          }
+          attempt();
+        };
+        attempt();
+      };
+      img.onerror = () => reject(new Error("Could not load image for QR thumbnail."));
+      img.src = sourceDataUrl;
+    });
+  }
+
+  async function handleToggleQr(evt) {
+    if (evt && evt.preventDefault) evt.preventDefault();
+    if (!state.finalImageDataUrl) return;
+
+    if (state.showingQr) {
+      // switch back to the photo view
+      state.showingQr = false;
+      if (el.resultImage) el.resultImage.hidden = false;
+      if (el.qrContainer) el.qrContainer.hidden = true;
+      if (el.qrToggleBtn) el.qrToggleBtn.textContent = "View as QR code";
+      if (el.resultCaption) el.resultCaption.textContent = "Digital Photobooth · Fresh Print";
+      return;
+    }
+
+    if (!window.QRCode) {
+      showUserError("QR code library did not load. Check your connection and try again.");
+      return;
+    }
+
+    try {
+      if (el.qrToggleBtn) el.qrToggleBtn.disabled = true;
+      const thumbDataUrl = await buildQrThumbnail(state.finalImageDataUrl);
+
+      if (el.qrContainer) {
+        el.qrContainer.innerHTML = "";
+        // eslint-disable-next-line no-new
+        new window.QRCode(el.qrContainer, {
+          text: thumbDataUrl,
+          width: 180,
+          height: 180,
+          correctLevel: window.QRCode.CorrectLevel.L,
+        });
+        el.qrContainer.hidden = false;
+      }
+      if (el.resultImage) el.resultImage.hidden = true;
+      state.showingQr = true;
+      if (el.qrToggleBtn) el.qrToggleBtn.textContent = "View photo strip";
+      if (el.resultCaption) {
+        el.resultCaption.textContent = "Low-res scan preview — use Download for full quality";
+      }
+      log("QR thumbnail generated, length:", thumbDataUrl.length);
+    } catch (err) {
+      error("Failed to build QR code:", err);
+      showUserError("Couldn't generate a QR code for this photo.");
+    } finally {
+      if (el.qrToggleBtn) el.qrToggleBtn.disabled = false;
+    }
   }
 
   /* ------------------------------------------------------------
      8. CONTROLS: download / retake / new session
   ------------------------------------------------------------ */
-  function handleDownload(evt) {
+  function dataUrlToBlob(dataUrl) {
+    const [header, base64] = dataUrl.split(",");
+    const mimeMatch = header.match(/data:(.*?);base64/);
+    const mime = mimeMatch ? mimeMatch[1] : "image/png";
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+  }
+
+  async function handleDownload(evt) {
     if (evt && evt.preventDefault) evt.preventDefault();
     if (!state.finalImageDataUrl) {
       warn("No final image available to download.");
       return;
     }
+
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const filename = `digital-photobooth-${stamp}.png`;
+
+    // iOS Safari ignores <a download> for data/blob URLs, so on
+    // devices that support the Web Share API with files, share the
+    // image directly to the system share sheet ("Save Image" /
+    // Photos) instead of relying on a silent, no-op click.
     try {
+      const blob = dataUrlToBlob(state.finalImageDataUrl);
+      const file = new File([blob], filename, { type: blob.type });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "Digital Photobooth",
+        });
+        log("Shared via Web Share API.");
+        return;
+      }
+
+      // Desktop / Android Chrome: normal anchor download works fine.
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      link.href = state.finalImageDataUrl;
-      link.download = `digital-photobooth-${stamp}.png`;
+      link.href = blobUrl;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      log("Download triggered.");
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 4000);
+      log("Download triggered via blob URL.");
     } catch (err) {
-      error("Download failed:", err);
-      showUserError("Could not download the image. Long-press the photo to save it instead.");
+      // User cancelling the share sheet also throws — don't treat
+      // that as a real error.
+      if (err && err.name === "AbortError") {
+        log("Share sheet dismissed by user.");
+        return;
+      }
+      error("Download failed, falling back to open-in-tab:", err);
+      const tab = window.open(state.finalImageDataUrl, "_blank");
+      if (!tab) {
+        showUserError("Could not open the image. Long-press the photo above and choose Save Image.");
+      } else {
+        showUserError("Long-press the photo and choose Save Image to download it.");
+      }
     }
   }
 
@@ -640,21 +860,90 @@
   }
 
   /* ------------------------------------------------------------
-     9. LIVE SETTINGS (theme / layout / filter change handlers)
+     9. KIOSK PICKER (visual swatches instead of native selects)
+     Real photobooths let you tap a colour/template on a touchscreen
+     rather than pick from a dropdown, so we render actual swatches
+     and keep the underlying #theme/#layout/#filter/#template
+     selects in sync (hidden) for compatibility with the rest of
+     the app and anything reading their .value.
   ------------------------------------------------------------ */
-  function wireSettingsListeners() {
-    safeAddListener(el.theme, "change", (e) => applyTheme(e.target.value), "theme:change");
-    safeAddListener(
-      el.layout,
-      "change",
-      (e) => { state.currentLayout = e.target.value; log(`Layout set: ${state.currentLayout}`); },
-      "layout:change"
+  function setSelectValue(selectEl, value) {
+    if (!selectEl) return;
+    selectEl.value = value;
+  }
+
+  function buildSwatchGroup(container, options, initialId, onPick, renderTile) {
+    if (!container) return;
+    container.innerHTML = "";
+    options.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = renderTile ? "tile-swatch" : "colour-swatch";
+      btn.setAttribute("role", "radio");
+      btn.setAttribute("aria-checked", String(opt.id === initialId));
+      btn.dataset.value = opt.id;
+      if (renderTile) {
+        renderTile(btn, opt);
+      } else {
+        btn.style.background = opt.hex;
+        btn.setAttribute("aria-label", opt.id);
+      }
+      btn.addEventListener("click", () => {
+        Array.from(container.children).forEach((child) => {
+          child.setAttribute("aria-checked", String(child === btn));
+        });
+        onPick(opt.id);
+      });
+      container.appendChild(btn);
+    });
+  }
+
+  function buildKioskPickers() {
+    buildSwatchGroup(el.colourSwatches, FRAME_COLOUR_SWATCHES, state.currentFrameColour, (id) => {
+      applyFrameColour(id);
+      setSelectValue(el.theme, id);
+    });
+
+    buildSwatchGroup(
+      el.templateSwatches,
+      Object.keys(TEMPLATES).map((id) => ({ id, ...TEMPLATES[id] })),
+      state.currentTemplate,
+      (id) => {
+        state.currentTemplate = id;
+        setSelectValue(el.template, id);
+        log(`Template set: ${id}`);
+      },
+      (btn, opt) => {
+        btn.innerHTML = `<span class="tile-icon">${opt.icon}</span><span class="tile-label">${opt.label}</span>`;
+      }
     );
-    safeAddListener(
-      el.filter,
-      "change",
-      (e) => { state.currentFilter = e.target.value; log(`Filter set: ${state.currentFilter}`); },
-      "filter:change"
+
+    buildSwatchGroup(
+      el.layoutSwatches,
+      LAYOUT_OPTIONS,
+      state.currentLayout,
+      (id) => {
+        state.currentLayout = id;
+        setSelectValue(el.layout, id);
+        log(`Layout set: ${id}`);
+      },
+      (btn, opt) => {
+        btn.innerHTML = `<span class="tile-icon">${opt.icon}</span><span class="tile-label">${opt.label}</span>`;
+      }
+    );
+
+    buildSwatchGroup(
+      el.filterSwatches,
+      FILTER_OPTIONS,
+      state.currentFilter,
+      (id) => {
+        state.currentFilter = id;
+        setSelectValue(el.filter, id);
+        log(`Filter set: ${id}`);
+      },
+      (btn, opt) => {
+        btn.innerHTML = `<span class="tile-icon">${opt.icon}</span><span class="tile-label">${opt.label}</span>`;
+      }
     );
   }
 
@@ -676,6 +965,7 @@
     safeAddListener(el.downloadBtn, "click", handleDownload, "downloadBtn:click");
     safeAddListener(el.retakeBtn, "click", handleRetake, "retakeBtn:click");
     safeAddListener(el.newSession, "click", handleNewSession, "newSession:click");
+    safeAddListener(el.qrToggleBtn, "click", handleToggleQr, "qrToggleBtn:click");
   }
 
   function wireLifecycleCleanup() {
@@ -705,12 +995,13 @@
     }
 
     wireCoreListeners();
-    wireSettingsListeners();
+    buildKioskPickers();
     wireLifecycleCleanup();
 
-    if (el.theme && el.theme.value) applyTheme(el.theme.value);
+    applyFrameColour(state.currentFrameColour);
     if (el.layout && el.layout.value) state.currentLayout = el.layout.value;
     if (el.filter && el.filter.value) state.currentFilter = el.filter.value;
+    if (el.template && el.template.value) state.currentTemplate = el.template.value;
 
     showScreen("welcomeScreen");
     log("Photobooth init complete.");
