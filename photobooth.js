@@ -1,564 +1,467 @@
-/* ===========================================================
-   DIGITAL PHOTOBOOTH
-   PART 1 / 3
-=========================================================== */
+/*
+==================================================
+DIGITAL PHOTOBOOTH
+Version 2.0.2 Alpha
+PART 1 / 4
+==================================================
+*/
 
-// ---------- ELEMENTS ----------
+
+// ==================================================
+// DOM ELEMENTS
+// ==================================================
 
 const welcomeScreen = document.getElementById("welcomeScreen");
-const boothScreen = document.getElementById("boothScreen");
+const cameraScreen = document.getElementById("cameraScreen");
+const previewScreen = document.getElementById("previewScreen");
+const processingScreen = document.getElementById("processingScreen");
+const printingScreen = document.getElementById("printingScreen");
+const resultScreen = document.getElementById("resultScreen");
+
 
 const startBtn = document.getElementById("startBtn");
-const restartBtn = document.getElementById("restartBtn");
 
-const fileInput = document.getElementById("fileInput");
+const camera = document.getElementById("camera");
 
-const status = document.getElementById("status");
+const switchCameraBtn = document.getElementById("switchCamera");
+const cancelSessionBtn = document.getElementById("cancelSession");
 
-const countdown = document.getElementById("countdown");
+const countdownDisplay = document.getElementById("countdown");
 
-const flashOverlay = document.getElementById("flashOverlay");
+const photoCounter = document.getElementById("photoCounter");
 
-const previewArea = document.getElementById("previewArea");
-const previewImage = document.getElementById("previewImage");
+const progressFill = document.getElementById("progressFill");
 
-const printingArea = document.getElementById("printingArea");
-const printingImage = document.getElementById("printingImage");
+const flash = document.getElementById("flash");
+
+const shutter = document.getElementById("shutter");
+
+
+const themeSelector = document.getElementById("theme");
+const layoutSelector = document.getElementById("layout");
+const filterSelector = document.getElementById("filter");
+
+
+const previewImages = [
+    document.getElementById("preview1"),
+    document.getElementById("preview2"),
+    document.getElementById("preview3"),
+    document.getElementById("preview4")
+];
+
+
+const printPreview = document.getElementById("printPreview");
+const printingStatus = document.getElementById("printingStatus");
+
+
+const resultImage = document.getElementById("resultImage");
+
 
 const downloadBtn = document.getElementById("downloadBtn");
-
-const qrArea = document.getElementById("qrArea");
-const qrCode = document.getElementById("qrCode");
-
-const layoutSelect = document.getElementById("layoutSelect");
+const retakeBtn = document.getElementById("retakeBtn");
+const newSessionBtn = document.getElementById("newSession");
 
 
-// ---------- OFFSCREEN CANVAS ----------
-
-const canvas = document.createElement("canvas");
-const ctx = canvas.getContext("2d");
+const exportCanvas = document.getElementById("exportCanvas");
 
 
-// ---------- VARIABLES ----------
+// ==================================================
+// APPLICATION STATE
+// ==================================================
 
+let currentStream = null;
+
+let facingMode = "user";
+
+let capturedPhotos = [];
+
+let finalImage = null;
+
+let photoIndex = 0;
+
+let sessionActive = false;
+
+
+let selectedTheme = "classic";
 let selectedLayout = "strip";
-
-let imageFiles = [];
-
-let loadedImages = [];
-
-let finalImage = "";
+let selectedFilter = "none";
 
 
-// ==========================================================
-// START SESSION
-// ==========================================================
-
-startBtn.addEventListener("click", () => {
-
-    selectedLayout = layoutSelect.value;
-
-    welcomeScreen.classList.add("hidden");
-
-    boothScreen.classList.remove("hidden");
-
-    resetBooth();
-
-    fileInput.click();
-
-});
+// Camera resolution target
+const CAMERA_WIDTH = 1280;
+const CAMERA_HEIGHT = 1920;
 
 
-// ==========================================================
-// FILE PICKER
-// ==========================================================
+// ==================================================
+// SCREEN TRANSITION SYSTEM
+// ==================================================
 
-fileInput.addEventListener("change", async (event) => {
+function showScreen(screen){
 
-    imageFiles = Array.from(event.target.files);
+    const screens = [
+        welcomeScreen,
+        cameraScreen,
+        previewScreen,
+        processingScreen,
+        printingScreen,
+        resultScreen
+    ];
 
-    if (imageFiles.length !== 4) {
 
-        alert("Please select exactly 4 photos.");
+    screens.forEach(item => {
 
-        fileInput.value = "";
+        if(item){
 
-        status.innerText = "Waiting...";
+            item.classList.remove("active");
 
-        return;
+        }
+
+    });
+
+
+    if(screen){
+
+        setTimeout(()=>{
+
+            screen.classList.add("active");
+
+        },50);
 
     }
-
-    status.innerText = "Preparing Session...";
-
-    await startCountdown();
-
-    await loadImages();
-
-    renderLayout();
-
-});
-
-
-// ==========================================================
-// COUNTDOWN
-// ==========================================================
-
-async function startCountdown() {
-
-    countdown.classList.remove("hidden");
-
-    for (let i = 3; i >= 1; i--) {
-
-        countdown.innerText = i;
-
-        status.innerText = "Get Ready";
-
-        await sleep(1000);
-
-    }
-
-    countdown.innerText = "📸";
-
-    flash();
-
-    await sleep(500);
-
-    countdown.classList.add("hidden");
 
 }
 
 
-// ==========================================================
-// FLASH EFFECT
-// ==========================================================
+// ==================================================
+// THEME SYSTEM
+// ==================================================
 
-function flash() {
+themeSelector.addEventListener(
+    "change",
+    ()=>{
 
-    flashOverlay.classList.add("flash");
+        selectedTheme = themeSelector.value;
 
-    setTimeout(() => {
+        document.body.className =
+        "theme-" + selectedTheme;
 
-        flashOverlay.classList.remove("flash");
-
-    },350);
-
-}
+    }
+);
 
 
-// ==========================================================
-// LOAD ALL IMAGES
-// ==========================================================
+// ==================================================
+// SETTINGS UPDATE
+// ==================================================
 
-async function loadImages(){
+layoutSelector.addEventListener(
+    "change",
+    ()=>{
 
-    loadedImages=[];
+        selectedLayout = layoutSelector.value;
 
-    status.innerText="Loading Photos...";
+    }
+);
 
-    const promises=imageFiles.map(file=>{
 
-        return new Promise((resolve,reject)=>{
+filterSelector.addEventListener(
+    "change",
+    ()=>{
 
-            const img=new Image();
+        selectedFilter = filterSelector.value;
 
-            img.onload=()=>resolve(img);
+    }
+);
 
-            img.onerror=reject;
 
-            img.src=URL.createObjectURL(file);
+// ==================================================
+// CAMERA START
+// ==================================================
+
+async function startCamera(){
+
+    stopCamera();
+
+
+    try{
+
+        currentStream =
+        await navigator.mediaDevices.getUserMedia({
+
+            video:{
+
+                facingMode:facingMode,
+
+                width:{
+                    ideal:CAMERA_WIDTH
+                },
+
+                height:{
+                    ideal:CAMERA_HEIGHT
+                }
+
+            },
+
+            audio:false
 
         });
 
-    });
 
-    loadedImages=await Promise.all(promises);
-
-}
+        camera.srcObject = currentStream;
 
 
-// ==========================================================
-// RESET BOOTH
-// ==========================================================
+        await camera.play();
 
-function resetBooth(){
 
-    status.innerText="Waiting...";
+    }
+    catch(error){
 
-    previewArea.classList.add("hidden");
+        console.error(
+            "Camera error:",
+            error
+        );
 
-    printingArea.classList.add("hidden");
 
-    qrArea.classList.add("hidden");
+        alert(
+            "Unable to access camera. Please allow camera permissions."
+        );
 
-    downloadBtn.classList.add("hidden");
-
-    restartBtn.classList.add("hidden");
-
-    countdown.classList.add("hidden");
-
-    fileInput.value="";
-
-    imageFiles=[];
-
-    loadedImages=[];
-
-    finalImage="";
+    }
 
 }
 
 
-// ==========================================================
-// SLEEP
-// ==========================================================
 
-function sleep(ms){
+// ==================================================
+// CAMERA CLEANUP
+// ==================================================
+
+function stopCamera(){
+
+    if(currentStream){
+
+        currentStream
+        .getTracks()
+        .forEach(track=>{
+
+            track.stop();
+
+        });
+
+
+        currentStream = null;
+
+    }
+
+
+    camera.srcObject = null;
+
+}
+
+
+// ==================================================
+// CAMERA SWITCH
+// ==================================================
+
+switchCameraBtn.addEventListener(
+    "click",
+    async()=>{
+
+
+        facingMode =
+        facingMode === "user"
+        ? "environment"
+        : "user";
+
+
+        await startCamera();
+
+
+    }
+);
+
+
+// ==================================================
+// CANCEL SESSION
+// ==================================================
+
+cancelSessionBtn.addEventListener(
+    "click",
+    ()=>{
+
+
+        stopCamera();
+
+
+        sessionActive = false;
+
+        capturedPhotos = [];
+
+        photoIndex = 0;
+
+
+        showScreen(
+            welcomeScreen
+        );
+
+
+    }
+);
+
+
+// ==================================================
+// START SESSION
+// ==================================================
+
+startBtn.addEventListener(
+    "click",
+    async()=>{
+
+
+        selectedTheme =
+        themeSelector.value;
+
+
+        selectedLayout =
+        layoutSelector.value;
+
+
+        selectedFilter =
+        filterSelector.value;
+
+
+        document.body.className =
+        "theme-" + selectedTheme;
+
+
+        capturedPhotos = [];
+
+        photoIndex = 0;
+
+        sessionActive = true;
+
+
+        progressFill.style.width =
+        "0%";
+
+
+        photoCounter.textContent =
+        "Photo 1 / 4";
+
+
+        showScreen(
+            cameraScreen
+        );
+
+
+        await startCamera();
+
+
+        beginPhotoSequence();
+
+
+    }
+);
+/*
+==================================================
+DIGITAL PHOTOBOOTH
+Version 2.0.2 Alpha
+PART 2 / 4
+==================================================
+*/
+
+
+// ==================================================
+// PHOTO SEQUENCE CONTROLLER
+// ==================================================
+
+async function beginPhotoSequence(){
+
+    if(!sessionActive){
+        return;
+    }
+
+
+    for(
+        photoIndex = 0;
+        photoIndex < 4;
+        photoIndex++
+    ){
+
+        photoCounter.textContent =
+        `Photo ${photoIndex + 1} / 4`;
+
+
+        await runCountdown();
+
+
+        if(!sessionActive){
+            return;
+        }
+
+
+        capturePhoto();
+
+
+        updateProgress();
+
+
+        await wait(1200);
+
+    }
+
+
+    await finishCaptureSequence();
+
+}
+
+
+
+// ==================================================
+// COUNTDOWN SYSTEM
+// ==================================================
+
+function runCountdown(){
 
     return new Promise(resolve=>{
 
-        setTimeout(resolve,ms);
 
-    });
+        let count = 3;
 
-}
 
+        countdownDisplay.textContent =
+        count;
 
-// ==========================================================
-// FIT IMAGE
-// ==========================================================
 
-function drawCover(img,x,y,w,h){
+        const timer =
+        setInterval(()=>{
 
-    const scale=Math.max(
 
-        w/img.width,
+            count--;
 
-        h/img.height
 
-    );
+            if(count > 0){
 
-    const nw=img.width*scale;
+                countdownDisplay.textContent =
+                count;
 
-    const nh=img.height*scale;
+            }
+            else{
 
-    const nx=x+(w-nw)/2;
 
-    const ny=y+(h-nh)/2;
+                clearInterval(timer);
 
-    ctx.drawImage(
 
-        img,
+                countdownDisplay.textContent =
+                "";
 
-        nx,
 
-        ny,
+                resolve();
 
-        nw,
+            }
 
-        nh
 
-    );
+        },1000);
 
-}
-
-
-// ==========================================================
-// PART 2 CONTINUES BELOW
-// ==========================================================
-// ==========================================================
-// RENDER PHOTO LAYOUT
-// ==========================================================
-
-function renderLayout(){
-
-    status.innerText="Creating Photo Strip...";
-
-    if(selectedLayout==="strip"){
-
-        drawStrip();
-
-    }else{
-
-        drawGrid();
-
-    }
-
-}
-
-
-// ==========================================================
-// 4 PHOTO STRIP
-// ==========================================================
-
-function drawStrip(){
-
-    canvas.width=700;
-    canvas.height=2200;
-
-    ctx.fillStyle="#ffffff";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    ctx.fillStyle="#000000";
-    ctx.font="bold 42px Arial";
-    ctx.textAlign="center";
-    ctx.fillText("DIGITAL PHOTOBOOTH",350,70);
-
-    const margin=50;
-    const photoWidth=600;
-    const photoHeight=420;
-    const gap=40;
-
-    for(let i=0;i<4;i++){
-
-        const y=120+i*(photoHeight+gap);
-
-        ctx.fillStyle="#f8f8f8";
-        ctx.fillRect(
-            margin-5,
-            y-5,
-            photoWidth+10,
-            photoHeight+10
-        );
-
-        drawCover(
-            loadedImages[i],
-            margin,
-            y,
-            photoWidth,
-            photoHeight
-        );
-
-    }
-
-    ctx.fillStyle="#000";
-    ctx.font="26px Arial";
-
-    const today=new Date();
-
-    ctx.fillText(
-        today.toLocaleDateString(),
-        350,
-        2140
-    );
-
-    finishRender();
-
-}
-
-
-
-// ==========================================================
-// 2 x 2 GRID
-// ==========================================================
-
-function drawGrid(){
-
-    canvas.width=1200;
-    canvas.height=1200;
-
-    ctx.fillStyle="#ffffff";
-    ctx.fillRect(0,0,1200,1200);
-
-    const padding=50;
-
-    const size=500;
-
-    drawCover(
-        loadedImages[0],
-        padding,
-        padding,
-        size,
-        size
-    );
-
-    drawCover(
-        loadedImages[1],
-        650,
-        padding,
-        size,
-        size
-    );
-
-    drawCover(
-        loadedImages[2],
-        padding,
-        650,
-        size,
-        size
-    );
-
-    drawCover(
-        loadedImages[3],
-        650,
-        650,
-        size,
-        size
-    );
-
-    ctx.strokeStyle="#ffffff";
-    ctx.lineWidth=20;
-
-    ctx.strokeRect(
-        40,
-        40,
-        1120,
-        1120
-    );
-
-    finishRender();
-
-}
-
-
-
-// ==========================================================
-// FINALIZE IMAGE
-// ==========================================================
-
-function finishRender(){
-
-    status.innerText="Finalizing...";
-
-    finalImage=canvas.toDataURL(
-        "image/png",
-        1
-    );
-
-    startPrintingAnimation();
-
-}
-
-
-
-// ==========================================================
-// PRINTING ANIMATION
-// ==========================================================
-
-async function startPrintingAnimation(){
-
-    previewArea.classList.add("hidden");
-
-    qrArea.classList.add("hidden");
-
-    downloadBtn.classList.add("hidden");
-
-    restartBtn.classList.add("hidden");
-
-    printingArea.classList.remove("hidden");
-
-    printingImage.src=finalImage;
-
-    await sleep(300);
-
-    printingImage.classList.add("printing");
-
-    status.innerText="Printing...";
-
-    await sleep(3300);
-
-    printingImage.classList.remove("printing");
-
-    showFinishedPhoto();
-
-}
-
-
-
-// ==========================================================
-// PART 3 CONTINUES BELOW
-// ==========================================================
-// ==========================================================
-// SHOW FINISHED PHOTO
-// ==========================================================
-
-function showFinishedPhoto(){
-
-    printingArea.classList.add("hidden");
-
-    previewArea.classList.remove("hidden");
-
-    previewImage.src=finalImage;
-
-    status.innerText="Your photo is ready!";
-
-    generateQRCode();
-
-    downloadBtn.classList.remove("hidden");
-
-    restartBtn.classList.remove("hidden");
-
-}
-
-
-
-// ==========================================================
-// QR CODE
-// ==========================================================
-
-function generateQRCode(){
-
-    qrArea.classList.remove("hidden");
-
-    qrCode.src =
-        "https://api.qrserver.com/v1/create-qr-code/?" +
-        "size=180x180&data=" +
-        encodeURIComponent(finalImage);
-
-}
-
-
-
-// ==========================================================
-// DOWNLOAD BUTTON
-// ==========================================================
-
-downloadBtn.addEventListener("click",()=>{
-
-    const link=document.createElement("a");
-
-    link.href=finalImage;
-
-    link.download="DigitalPhotobooth.png";
-
-    document.body.appendChild(link);
-
-    link.click();
-
-    document.body.removeChild(link);
-
-});
-
-
-
-// ==========================================================
-// RESTART SESSION
-// ==========================================================
-
-restartBtn.addEventListener("click",()=>{
-
-    welcomeScreen.classList.remove("hidden");
-
-    boothScreen.classList.add("hidden");
-
-    resetBooth();
-
-});
-
-
-
-// ==========================================================
-// CLEAN OBJECT URLS
-// ==========================================================
-
-function cleanupImages(){
-
-    imageFiles.forEach(file=>{
-
-        try{
-
-            URL.revokeObjectURL(file);
-
-        }catch(e){}
 
     });
 
@@ -566,132 +469,1189 @@ function cleanupImages(){
 
 
 
-// ==========================================================
-// KEYBOARD SHORTCUTS
-// ==========================================================
+// ==================================================
+// PHOTO CAPTURE
+// ==================================================
 
-document.addEventListener("keydown",(e)=>{
+function capturePhoto(){
 
-    if(e.key==="Escape"){
 
-        welcomeScreen.classList.remove("hidden");
+    const canvas =
+    document.createElement("canvas");
 
-        boothScreen.classList.add("hidden");
 
-        resetBooth();
+    const context =
+    canvas.getContext("2d");
+
+
+    canvas.width =
+    camera.videoWidth;
+
+
+    canvas.height =
+    camera.videoHeight;
+
+
+
+    context.save();
+
+
+
+    /*
+    Mirror front camera
+    */
+
+    if(facingMode === "user"){
+
+        context.translate(
+            canvas.width,
+            0
+        );
+
+        context.scale(
+            -1,
+            1
+        );
 
     }
 
-});
+
+
+    context.drawImage(
+        camera,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    context.restore();
 
 
 
-// ==========================================================
-// OPTIONAL WATERMARK
-// ==========================================================
+    applyCanvasFilter(
+        context,
+        canvas
+    );
 
-function addWatermark(){
+
+
+    const image =
+    canvas.toDataURL(
+        "image/jpeg",
+        0.95
+    );
+
+
+
+    capturedPhotos.push(
+        image
+    );
+
+
+    triggerFlash();
+
+
+    playShutter();
+
+
+}
+
+
+
+// ==================================================
+// FILTER ENGINE
+// ==================================================
+
+function applyCanvasFilter(
+    ctx,
+    canvas
+){
+
+
+    if(selectedFilter === "none"){
+        return;
+    }
+
+
+    const imageData =
+    ctx.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    const data =
+    imageData.data;
+
+
+
+    for(
+        let i = 0;
+        i < data.length;
+        i += 4
+    ){
+
+
+        let r =
+        data[i];
+
+
+        let g =
+        data[i+1];
+
+
+        let b =
+        data[i+2];
+
+
+
+        if(selectedFilter === "bw"){
+
+
+            const gray =
+            (r + g + b) / 3;
+
+
+            data[i] =
+            gray;
+
+
+            data[i+1] =
+            gray;
+
+
+            data[i+2] =
+            gray;
+
+
+        }
+
+
+
+        else if(selectedFilter === "warm"){
+
+
+            data[i] =
+            Math.min(
+                255,
+                r + 25
+            );
+
+
+            data[i+1] =
+            Math.min(
+                255,
+                g + 10
+            );
+
+
+            data[i+2] =
+            Math.max(
+                0,
+                b - 15
+            );
+
+
+        }
+
+
+
+        else if(selectedFilter === "cool"){
+
+
+            data[i] =
+            Math.max(
+                0,
+                r - 15
+            );
+
+
+            data[i+1] =
+            g + 5;
+
+
+            data[i+2] =
+            Math.min(
+                255,
+                b + 25
+            );
+
+
+        }
+
+
+
+        else if(selectedFilter === "vintage"){
+
+
+            data[i] =
+            r * 0.9 + 30;
+
+
+            data[i+1] =
+            g * 0.85 + 25;
+
+
+            data[i+2] =
+            b * 0.7 + 10;
+
+
+        }
+
+
+    }
+
+
+
+    ctx.putImageData(
+        imageData,
+        0,
+        0
+    );
+
+
+}
+
+
+
+// ==================================================
+// FLASH EFFECT
+// ==================================================
+
+function triggerFlash(){
+
+
+    flash.classList.remove(
+        "active"
+    );
+
+
+    void flash.offsetWidth;
+
+
+    flash.classList.add(
+        "active"
+    );
+
+
+}
+
+
+
+// ==================================================
+// SHUTTER SOUND
+// ==================================================
+
+function playShutter(){
+
+
+    if(shutter){
+
+
+        shutter.currentTime =
+        0;
+
+
+        shutter.play()
+        .catch(()=>{});
+
+
+    }
+
+
+}
+
+
+
+// ==================================================
+// PROGRESS BAR
+// ==================================================
+
+function updateProgress(){
+
+
+    const progress =
+    (
+        capturedPhotos.length / 4
+    ) * 100;
+
+
+
+    progressFill.style.width =
+    progress + "%";
+
+
+}
+
+
+
+// ==================================================
+// WAIT HELPER
+// ==================================================
+
+function wait(ms){
+
+
+    return new Promise(
+        resolve =>
+        setTimeout(
+            resolve,
+            ms
+        )
+    );
+
+
+}
+
+
+
+// ==================================================
+// AFTER 4 PHOTOS
+// ==================================================
+
+async function finishCaptureSequence(){
+
+
+    stopCamera();
+
+
+
+    loadPreview();
+
+
+
+    showScreen(
+        previewScreen
+    );
+
+
+
+    await wait(2000);
+
+
+
+    showScreen(
+        processingScreen
+    );
+
+
+
+    await wait(1500);
+
+
+
+    createFinalExport();
+
+
+}
+/*
+==================================================
+DIGITAL PHOTOBOOTH
+Version 2.0.2 Alpha
+PART 3 / 4
+==================================================
+*/
+
+
+// ==================================================
+// CONTACT SHEET PREVIEW
+// ==================================================
+
+function loadPreview(){
+
+
+    previewImages.forEach(
+        (img,index)=>{
+
+
+            if(capturedPhotos[index]){
+
+                img.src =
+                capturedPhotos[index];
+
+            }
+
+
+        }
+    );
+
+
+}
+
+
+
+// ==================================================
+// EXPORT ENGINE
+// ==================================================
+
+async function createFinalExport(){
+
+
+    const images =
+    await Promise.all(
+
+        capturedPhotos.map(
+            src=>loadImage(src)
+        )
+
+    );
+
+
+
+    const canvas =
+    exportCanvas;
+
+
+
+    const ctx =
+    canvas.getContext("2d");
+
+
+
+    const width =
+    selectedLayout === "strip"
+    ? 900
+    : 1200;
+
+
+
+    const height =
+    selectedLayout === "strip"
+    ? 2600
+    : 1200;
+
+
+
+    canvas.width =
+    width;
+
+
+    canvas.height =
+    height;
+
+
+
+    drawBackground(
+        ctx,
+        width,
+        height
+    );
+
+
+
+    if(selectedLayout === "strip"){
+
+
+        drawStrip(
+            ctx,
+            images,
+            width,
+            height
+        );
+
+
+    }
+    else{
+
+
+        drawGrid(
+            ctx,
+            images,
+            width,
+            height
+        );
+
+
+    }
+
+
+
+    drawWatermark(
+        ctx,
+        width,
+        height
+    );
+
+
+
+    finalImage =
+    canvas.toDataURL(
+        "image/jpeg",
+        0.95
+    );
+
+
+
+    preparePrinter();
+
+
+
+}
+
+
+
+// ==================================================
+// CANVAS BACKGROUND
+// ==================================================
+
+function drawBackground(
+    ctx,
+    width,
+    height
+){
+
+
+    let color =
+    "#ffffff";
+
+
+
+    const themeColors = {
+
+        classic:"#ffffff",
+
+        black:"#111111",
+
+        pink:"#fff1f5",
+
+        blue:"#e0f2fe",
+
+        mint:"#ecfdf5",
+
+        cream:"#fffaf0"
+
+    };
+
+
+
+    color =
+    themeColors[selectedTheme]
+    ||
+    color;
+
+
+
+    ctx.fillStyle =
+    color;
+
+
+    ctx.fillRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+
+}
+
+
+
+// ==================================================
+// STRIP EXPORT
+// ==================================================
+
+function drawStrip(
+    ctx,
+    images,
+    width,
+    height
+){
+
+
+    const padding =
+    80;
+
+
+    const photoWidth =
+    width - (padding * 2);
+
+
+
+    const photoHeight =
+    480;
+
+
+
+    images.forEach(
+        (img,index)=>{
+
+
+            const y =
+            padding +
+            (
+                index *
+                (
+                    photoHeight +
+                    70
+                )
+            );
+
+
+
+            drawImageCover(
+                ctx,
+                img,
+                padding,
+                y,
+                photoWidth,
+                photoHeight
+            );
+
+
+        }
+    );
+
+
+
+}
+
+
+
+// ==================================================
+// GRID EXPORT
+// ==================================================
+
+function drawGrid(
+    ctx,
+    images,
+    width,
+    height
+){
+
+
+    const padding =
+    80;
+
+
+    const gap =
+    40;
+
+
+    const size =
+    (
+        width -
+        (padding * 2) -
+        gap
+    ) / 2;
+
+
+
+    images.forEach(
+        (img,index)=>{
+
+
+            const column =
+            index % 2;
+
+
+            const row =
+            Math.floor(index / 2);
+
+
+
+            const x =
+            padding +
+            (
+                column *
+                (
+                    size +
+                    gap
+                )
+            );
+
+
+
+            const y =
+            padding +
+            (
+                row *
+                (
+                    size +
+                    gap
+                )
+            );
+
+
+
+            drawImageCover(
+                ctx,
+                img,
+                x,
+                y,
+                size,
+                size
+            );
+
+
+        }
+    );
+
+
+}
+
+
+
+// ==================================================
+// IMAGE COVER DRAWING
+// ==================================================
+
+function drawImageCover(
+    ctx,
+    img,
+    x,
+    y,
+    width,
+    height
+){
+
+
+    const ratio =
+    Math.max(
+        width / img.width,
+        height / img.height
+    );
+
+
+
+    const newWidth =
+    img.width * ratio;
+
+
+    const newHeight =
+    img.height * ratio;
+
+
+
+    const offsetX =
+    (
+        width -
+        newWidth
+    ) / 2;
+
+
+
+    const offsetY =
+    (
+        height -
+        newHeight
+    ) / 2;
+
+
 
     ctx.save();
 
-    ctx.globalAlpha=0.08;
 
-    ctx.fillStyle="#000";
+    ctx.beginPath();
 
-    ctx.font="bold 48px Arial";
 
-    ctx.textAlign="center";
-
-    ctx.translate(canvas.width/2,canvas.height/2);
-
-    ctx.rotate(-0.5);
-
-    ctx.fillText(
-
-        "DIGITAL PHOTOBOOTH",
-
-        0,
-
-        0
-
+    ctx.roundRect(
+        x,
+        y,
+        width,
+        height,
+        24
     );
 
+
+    ctx.clip();
+
+
+
+    ctx.drawImage(
+        img,
+        x + offsetX,
+        y + offsetY,
+        newWidth,
+        newHeight
+    );
+
+
     ctx.restore();
+
 
 }
 
 
 
-// ==========================================================
-// IMPROVED STRIP FINISH
-// ==========================================================
+// ==================================================
+// WATERMARK
+// ==================================================
 
-const originalFinishRender=finishRender;
+function drawWatermark(
+    ctx,
+    width,
+    height
+){
 
-finishRender=function(){
 
-    addWatermark();
+    ctx.save();
 
-    finalImage=canvas.toDataURL(
 
-        "image/png",
+    ctx.font =
+    "bold 42px Arial";
 
-        1
 
+    ctx.fillStyle =
+    "rgba(0,0,0,0.35)";
+
+
+
+    ctx.textAlign =
+    "center";
+
+
+
+    ctx.fillText(
+        "DIGITAL PHOTOBOOTH",
+        width / 2,
+        height - 45
     );
 
-    startPrintingAnimation();
-
-};
 
 
+    ctx.restore();
 
-// ==========================================================
-// PREVENT IMAGE DRAGGING
-// ==========================================================
 
-document.addEventListener("dragstart",(e)=>{
-
-    e.preventDefault();
-
-});
+}
 
 
 
-// ==========================================================
-// DISABLE DOUBLE TAP ZOOM
-// ==========================================================
+// ==================================================
+// LOAD IMAGE HELPER
+// ==================================================
 
-let lastTouchEnd=0;
+function loadImage(src){
 
-document.addEventListener("touchend",(event)=>{
 
-    const now=(new Date()).getTime();
+    return new Promise(
+        resolve=>{
 
-    if(now-lastTouchEnd<=300){
 
-        event.preventDefault();
+            const img =
+            new Image();
+
+
+            img.onload =
+            ()=>resolve(img);
+
+
+            img.src =
+            src;
+
+
+        }
+    );
+
+
+}
+/*
+==================================================
+DIGITAL PHOTOBOOTH
+Version 2.0.2 Alpha
+PART 4 / 4
+==================================================
+*/
+
+
+// ==================================================
+// PRINTER PREPARATION
+// ==================================================
+
+function preparePrinter(){
+
+
+    printPreview.src =
+    finalImage;
+
+
+
+    showScreen(
+        printingScreen
+    );
+
+
+    printingStatus.textContent =
+    "Printing...";
+
+
+
+    setTimeout(()=>{
+
+
+        printingStatus.textContent =
+        "Almost ready...";
+
+
+    },1500);
+
+
+
+    setTimeout(()=>{
+
+
+        showResult();
+
+
+    },3200);
+
+
+}
+
+
+
+// ==================================================
+// RESULT SCREEN
+// ==================================================
+
+function showResult(){
+
+
+    resultImage.src =
+    finalImage;
+
+
+
+    showScreen(
+        resultScreen
+    );
+
+
+}
+
+
+
+// ==================================================
+// DOWNLOAD IMAGE
+// ==================================================
+
+downloadBtn.addEventListener(
+    "click",
+    ()=>{
+
+
+        if(!finalImage){
+            return;
+        }
+
+
+
+        const link =
+        document.createElement(
+            "a"
+        );
+
+
+        link.href =
+        finalImage;
+
+
+        link.download =
+        "digital-photobooth.jpg";
+
+
+
+        document.body.appendChild(
+            link
+        );
+
+
+        link.click();
+
+
+
+        document.body.removeChild(
+            link
+        );
+
 
     }
-
-    lastTouchEnd=now;
-
-},{passive:false});
+);
 
 
 
-// ==========================================================
-// INITIAL STATUS
-// ==========================================================
+// ==================================================
+// RETAKE SESSION
+// ==================================================
 
-status.innerText="Waiting...";
-
-welcomeScreen.classList.remove("hidden");
-
-boothScreen.classList.add("hidden");
+retakeBtn.addEventListener(
+    "click",
+    async()=>{
 
 
+        capturedPhotos = [];
 
-// ==========================================================
-// END OF PHOTOBOOTH.JS
-// ==========================================================
+        finalImage = null;
+
+        photoIndex = 0;
+
+
+        progressFill.style.width =
+        "0%";
+
+
+
+        photoCounter.textContent =
+        "Photo 1 / 4";
+
+
+
+        sessionActive = true;
+
+
+
+        showScreen(
+            cameraScreen
+        );
+
+
+
+        await startCamera();
+
+
+
+        beginPhotoSequence();
+
+
+    }
+);
+
+
+
+// ==================================================
+// NEW SESSION
+// ==================================================
+
+newSessionBtn.addEventListener(
+    "click",
+    ()=>{
+
+
+        resetSession();
+
+
+
+        showScreen(
+            welcomeScreen
+        );
+
+
+    }
+);
+
+
+
+// ==================================================
+// SESSION RESET
+// ==================================================
+
+function resetSession(){
+
+
+    stopCamera();
+
+
+
+    capturedPhotos = [];
+
+    finalImage = null;
+
+    photoIndex = 0;
+
+
+    sessionActive = false;
+
+
+
+    previewImages.forEach(
+        img=>{
+
+            img.src = "";
+
+        }
+    );
+
+
+
+    resultImage.src = "";
+
+    printPreview.src = "";
+
+
+
+    progressFill.style.width =
+    "0%";
+
+
+
+    countdownDisplay.textContent =
+    "";
+
+
+
+    photoCounter.textContent =
+    "Photo 1 / 4";
+
+
+}
+
+
+
+// ==================================================
+// SAFARI PAGE CLEANUP
+// ==================================================
+
+window.addEventListener(
+    "pagehide",
+    ()=>{
+
+
+        stopCamera();
+
+
+    }
+);
+
+
+
+// ==================================================
+// PREVENT MEMORY LEAKS
+// ==================================================
+
+window.addEventListener(
+    "beforeunload",
+    ()=>{
+
+
+        stopCamera();
+
+
+    }
+);
+
+
+
+// ==================================================
+// INITIAL STATE
+// ==================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    ()=>{
+
+
+        document.body.className =
+        "theme-classic";
+
+
+        showScreen(
+            welcomeScreen
+        );
+
+
+    }
+);
