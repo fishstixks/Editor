@@ -1,3 +1,4 @@
+// Version 2: Multi-clip stitching engine with iOS Safari optimizations
 const mediaInput = document.getElementById('mediaInput');
 const fileCount = document.getElementById('fileCount');
 const templateSelect = document.getElementById('templateSelect');
@@ -47,7 +48,8 @@ generateBtn.addEventListener('click', async () => {
         const video = document.createElement('video');
         video.src = url;
         video.muted = true;
-        video.playsInline = true;
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
         video.crossOrigin = 'anonymous';
         video.onloadeddata = () => {
           loadedElements.push({ element: video, type: 'video', w: video.videoWidth, h: video.videoHeight });
