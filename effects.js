@@ -1,4 +1,4 @@
-// Isolated template library for editing and adding visual styles
+// Version 2: Isolated template library for editing and adding visual styles
 window.VideoTemplates = {
   beatDrop: (ctx, canvas, clipProgress, currentFrame, fps) => {
     let scale = 1.0;
