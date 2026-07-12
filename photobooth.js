@@ -1,7 +1,24 @@
 /* ============================================================
    DIGITAL PHOTOBOOTH
-   photobooth.js — Version 2.1.0
+   photobooth.js — Version 2.2.0
    Full build
+
+   Changelog vs 2.1.0:
+   - Photos no longer look squished. The composite used to force
+     each raw capture into a fixed 4:3-ish box with a plain stretch
+     drawImage(img, x, y, w, h) call, regardless of the photo's real
+     aspect ratio — any mismatch = visible distortion. Cells are now
+     3:4, matching the live .camera-frame preview exactly, and
+     drawImageCover() crops (never stretches) to fill them, the same
+     way CSS object-fit:cover works.
+   - Template decorations are real drawn vector artwork (a blossom
+     sprig, a sparkle, a traced heart, scattered confetti pieces —
+     see "2.5 CANVAS ART MOTIFS") instead of emoji glyphs, sized to
+     actually read at a glance instead of 34px text lost in a 28px
+     margin. Every template, including Classic, also gets the
+     dashed "perforation" motif drawn the full height of the strip —
+     the same signature line already used around the on-screen
+     result frame in CSS, now carried into the exported image itself.
 
    Changelog vs 2.0.6:
    - startCamera() now waits for the video element to actually report
@@ -47,7 +64,7 @@
     } catch (e) {}
   }
 
-  const APP_VERSION = "2.1.0";
+  const APP_VERSION = "2.2.0";
   log(`photobooth.js v${APP_VERSION} loading...`);
 
   /* ------------------------------------------------------------
@@ -141,15 +158,17 @@
     sky: { bg: "#dde9f7", accent: "rgba(40,80,140,0.25)", ink: "rgba(20,50,95,0.6)" },
   };
 
-  // Template designs — decorations drawn on top of the composite.
-  // Emoji glyphs render natively via canvas fillText on iOS/Android,
-  // so no image assets are needed.
+  // Template designs — each one (besides Classic) is drawn as real
+  // vector artwork directly on the export canvas (see "CANVAS ART
+  // MOTIFS" below), not emoji glyphs. `icon` here is only the tiny
+  // symbol shown on the picker chip, kept in the same restrained
+  // unicode-glyph language as the layout/filter chips (▤ ▦ ◐ ◑ …).
   const TEMPLATES = {
-    classic: { label: "Classic", icon: "—", glyphs: [] },
-    blossom: { label: "Blossom", icon: "🌸", glyphs: ["🌸", "🌷", "🌸"] },
-    stars: { label: "Stars", icon: "✨", glyphs: ["✨", "⭐", "✨"] },
-    hearts: { label: "Hearts", icon: "💕", glyphs: ["💕", "💗", "💕"] },
-    confetti: { label: "Confetti", icon: "🎉", glyphs: ["🎉", "🎊", "✨"] },
+    classic: { label: "Classic", icon: "—" },
+    blossom: { label: "Blossom", icon: "❀" },
+    stars: { label: "Stars", icon: "✧" },
+    hearts: { label: "Hearts", icon: "♡" },
+    confetti: { label: "Confetti", icon: "✦" },
   };
 
   const FRAME_COLOUR_SWATCHES = [
@@ -173,6 +192,183 @@
     { id: "cool", icon: "◓", label: "Cool" },
     { id: "vintage", icon: "◔", label: "Vintage" },
   ];
+
+  /* ------------------------------------------------------------
+     2.5 CANVAS ART MOTIFS
+     Real hand-drawn vector artwork for the printed strip, replacing
+     the old emoji glyphs. Each motif is a small pure function that
+     draws itself centred at (cx, cy) at the given scale — cheap to
+     call many times, crisp at any resolution (unlike an emoji glyph,
+     which is just whatever font the OS happens to substitute).
+  ------------------------------------------------------------ */
+
+  // The brand's own signature: the dashed "perforation" that already
+  // runs down both sides of the result-frame in CSS. Drawing it onto
+  // the exported strip itself (not just the on-screen frame around
+  // it) ties capture to output, so every template — including
+  // Classic — gets a real, deliberate piece of design rather than
+  // "barely anything".
+  function drawPerforationEdges(ctx, x, y, w, h, color) {
+    const dashLen = 9;
+    const gapLen = 7;
+    const dashW = 4;
+    const inset = 10;
+    ctx.save();
+    ctx.fillStyle = color;
+    [x + inset, x + w - inset - dashW].forEach((lineX) => {
+      let cy = y + inset;
+      while (cy < y + h - inset) {
+        ctx.fillRect(lineX, cy, dashW, dashLen);
+        cy += dashLen + gapLen;
+      }
+    });
+    ctx.restore();
+  }
+
+  // A small 5-petal sprig — Blossom template.
+  function drawBlossomMotif(ctx, cx, cy, scale, petalColor, centerColor) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    for (let i = 0; i < 5; i++) {
+      ctx.save();
+      ctx.rotate((Math.PI * 2 * i) / 5);
+      ctx.beginPath();
+      ctx.ellipse(0, -9, 5.5, 9, 0, 0, Math.PI * 2);
+      ctx.fillStyle = petalColor;
+      ctx.globalAlpha = 0.92;
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.beginPath();
+    ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = centerColor;
+    ctx.globalAlpha = 1;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // A 4-point sparkle — Stars template.
+  function drawSparkleMotif(ctx, cx, cy, size, color) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, -size);
+    ctx.quadraticCurveTo(size * 0.18, -size * 0.18, size, 0);
+    ctx.quadraticCurveTo(size * 0.18, size * 0.18, 0, size);
+    ctx.quadraticCurveTo(-size * 0.18, size * 0.18, -size, 0);
+    ctx.quadraticCurveTo(-size * 0.18, -size * 0.18, 0, -size);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.16, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // A simple traced heart — Hearts template.
+  function drawHeartMotif(ctx, cx, cy, size, color) {
+    ctx.save();
+    ctx.translate(cx, cy - size * 0.3);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, size * 0.35);
+    ctx.bezierCurveTo(-size * 0.6, -size * 0.35, -size, size * 0.15, 0, size * 0.85);
+    ctx.bezierCurveTo(size, size * 0.15, size * 0.6, -size * 0.35, 0, size * 0.35);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // A little scattered piece of confetti — Confetti template.
+  function drawConfettiMotif(ctx, cx, cy, size, color, rotation, shape) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+    ctx.fillStyle = color;
+    if (shape === "circle") {
+      ctx.beginPath();
+      ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (shape === "triangle") {
+      ctx.beginPath();
+      ctx.moveTo(0, -size / 2);
+      ctx.lineTo(size / 2, size / 2);
+      ctx.lineTo(-size / 2, size / 2);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.fillRect(-size / 2, -size / 3, size, (size * 2) / 3);
+    }
+    ctx.restore();
+  }
+
+  // Draws a single motif for a given template id at (cx, cy), sized
+  // to `scale`. Returns false (no-op) for "classic", which relies on
+  // the perforation edges alone as its signature.
+  function drawTemplateMotifAt(ctx, templateId, cx, cy, scale, colours) {
+    switch (templateId) {
+      case "blossom":
+        drawBlossomMotif(ctx, cx, cy, scale / 16, var_blossomPetal(), colours.ink);
+        return true;
+      case "stars":
+        drawSparkleMotif(ctx, cx, cy, scale, var_gold());
+        return true;
+      case "hearts":
+        drawHeartMotif(ctx, cx, cy, scale, var_blossomDeep());
+        return true;
+      case "confetti": {
+        const shapes = ["circle", "triangle", "rect"];
+        const palette = [var_gold(), var_blossomPetal(), colours.ink];
+        [-1, 0, 1].forEach((offset, i) => {
+          drawConfettiMotif(
+            ctx,
+            cx + offset * scale * 0.9,
+            cy + (i % 2 === 0 ? -scale * 0.3 : scale * 0.3),
+            scale * 0.85,
+            palette[i % palette.length],
+            offset * 0.6,
+            shapes[i % shapes.length]
+          );
+        });
+        return true;
+      }
+      default:
+        return false;
+    }
+  }
+
+  // Small fixed brand colours used by canvas artwork, kept separate
+  // from the CSS custom properties (canvas can't read var() values).
+  function var_gold() { return "#c9a66b"; }
+  function var_blossomPetal() { return "#e8b4bc"; }
+  function var_blossomDeep() { return "#d98fa0"; }
+
+  // Draws `img` into the destination box exactly like CSS
+  // `object-fit: cover` — cropping to fill without distorting the
+  // aspect ratio. The old code stretched the raw capture into a
+  // fixed-aspect box directly, which is what made photos look
+  // squished whenever the camera's native frame didn't already
+  // match that box's proportions.
+  function drawImageCover(ctx, img, dx, dy, dWidth, dHeight) {
+    const imgRatio = img.width / img.height;
+    const boxRatio = dWidth / dHeight;
+    let sx, sy, sw, sh;
+    if (imgRatio > boxRatio) {
+      sh = img.height;
+      sw = sh * boxRatio;
+      sx = (img.width - sw) / 2;
+      sy = 0;
+    } else {
+      sw = img.width;
+      sh = sw / boxRatio;
+      sx = 0;
+      sy = (img.height - sh) / 2;
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dWidth, dHeight);
+  }
 
   /* ------------------------------------------------------------
      3. SCREEN MANAGEMENT
@@ -612,19 +808,27 @@
     }
     const ctx = canvas.getContext("2d");
     const colours = FRAME_COLOURS[state.currentFrameColour] || FRAME_COLOURS.cream;
-    const template = TEMPLATES[state.currentTemplate] || TEMPLATES.classic;
+    const templateId = TEMPLATES[state.currentTemplate] ? state.currentTemplate : "classic";
     const filterCss = FILTERS[state.currentFilter] || FILTERS.normal;
 
-    const border = 28;
-    const gap = 14;
-    const frameW = 480;
-    const frameH = 360;
+    const border = 34;
+    const gap = 12;
+    const footerH = 96; // dedicated band for the watermark + centre motif
 
-    let totalW, totalH, positions;
+    // Cells use the SAME 3:4 aspect ratio as the live camera-frame
+    // (see .camera-frame in style.css). Drawing into a box with a
+    // different aspect than the raw capture is what stretched/
+    // squished the photos before; matching it means every photo in
+    // the strip looks exactly like what was framed on screen.
+    const CELL_ASPECT = 3 / 4; // width / height
+
+    let frameW, frameH, totalW, totalH, positions;
 
     if (state.currentLayout === "grid") {
+      frameW = 300;
+      frameH = frameW / CELL_ASPECT;
       totalW = border * 2 + frameW * 2 + gap;
-      totalH = border * 2 + frameH * 2 + gap + 70; // extra bottom space for watermark
+      totalH = border * 2 + frameH * 2 + gap + footerH;
       positions = [
         { x: border, y: border },
         { x: border + frameW + gap, y: border },
@@ -632,8 +836,10 @@
         { x: border + frameW + gap, y: border + frameH + gap },
       ];
     } else {
+      frameW = 400;
+      frameH = frameW / CELL_ASPECT;
       totalW = border * 2 + frameW;
-      totalH = border * 2 + frameH * 4 + gap * 3 + 70;
+      totalH = border * 2 + frameH * 4 + gap * 3 + footerH;
       positions = [0, 1, 2, 3].map((i) => ({
         x: border,
         y: border + i * (frameH + gap),
@@ -670,8 +876,12 @@
         const img = images[idx];
         if (!img) return;
         ctx.save();
+        ctx.beginPath();
+        ctx.rect(pos.x, pos.y, frameW, frameH);
+        ctx.clip();
         ctx.filter = filterCss;
-        ctx.drawImage(img, pos.x, pos.y, frameW, frameH);
+        // object-fit:cover style crop — never distorts the photo.
+        drawImageCover(ctx, img, pos.x, pos.y, frameW, frameH);
         ctx.restore();
 
         // thin frame around each cell, tinted to the chosen colour
@@ -687,42 +897,39 @@
       goToPrinting();
     }
 
-    // Scatters the template's glyphs (flowers, stars, hearts, confetti)
-    // along the outer border of the strip, like stickers on a real
-    // printed photobooth strip. "Classic" has no glyphs, so it's a no-op.
+    // Real vector artwork, not emoji: the perforation motif runs the
+    // full height of the strip on every template (the brand's
+    // signature, tying capture to output — see style.css intro
+    // comment). Templates beyond "classic" add a deliberate cluster
+    // of hand-drawn motifs at the four corners and centred above the
+    // watermark, sized to be clearly visible rather than a tiny
+    // 34px glyph lost in a 28px margin.
     function drawTemplateDecorations() {
-      if (!template.glyphs || template.glyphs.length === 0) return;
+      drawPerforationEdges(ctx, 0, 0, totalW, totalH, colours.accent);
+      if (templateId === "classic") return;
 
-      ctx.save();
-      ctx.font = "34px serif"; // system emoji font renders regardless of family
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+      const motifScale = 15;
+      const cornerInset = border / 2 + 4;
+      const corners = [
+        { x: cornerInset, y: cornerInset },
+        { x: totalW - cornerInset, y: cornerInset },
+        { x: cornerInset, y: totalH - footerH + cornerInset },
+        { x: totalW - cornerInset, y: totalH - footerH + cornerInset },
+      ];
+      corners.forEach((c) => drawTemplateMotifAt(ctx, templateId, c.x, c.y, motifScale, colours));
 
-      const marginY = border / 2 + 4;
-      const spots = [];
-
-      // top border and bottom border, spaced evenly
-      const count = state.currentLayout === "grid" ? 5 : 4;
-      for (let i = 0; i < count; i++) {
-        const x = (totalW / (count + 1)) * (i + 1);
-        spots.push({ x, y: marginY });
-        spots.push({ x, y: totalH - marginY - (state.currentLayout === "strip" ? 60 : 0) });
-      }
-
-      spots.forEach((spot, i) => {
-        const glyph = template.glyphs[i % template.glyphs.length];
-        ctx.fillText(glyph, spot.x, spot.y);
-      });
-
-      ctx.restore();
+      // A slightly larger centred motif above the watermark text —
+      // the strip's one deliberate flourish, not scattered clutter.
+      drawTemplateMotifAt(ctx, templateId, totalW / 2, totalH - footerH + 26, motifScale * 1.3, colours);
     }
 
     function drawWatermark() {
       ctx.save();
       ctx.fillStyle = colours.ink;
-      ctx.font = "600 28px 'Songmyung', Georgia, serif";
+      ctx.font = "600 26px 'Songmyung', Georgia, serif";
       ctx.textAlign = "center";
-      ctx.fillText("DIGITAL PHOTOBOOTH", totalW / 2, totalH - border / 2 - (state.currentLayout === "strip" ? 40 : 0));
+      const y = templateId === "classic" ? totalH - footerH / 2 : totalH - footerH / 2 + 20;
+      ctx.fillText("DIGITAL PHOTOBOOTH", totalW / 2, y);
       ctx.restore();
     }
   }

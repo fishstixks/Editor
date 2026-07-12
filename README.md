@@ -1,6 +1,37 @@
-# Digital Photobooth — v2.1.0
+# Digital Photobooth — v2.2.0
 
-## What was actually broken
+## v2.2.0 — squished photos + emoji decorations
+
+**Photos looked squished.** The compositor forced every raw capture
+into a fixed box with a plain stretch (`drawImage(img, x, y, w, h)`),
+ignoring the photo's real aspect ratio. Any mismatch between the
+camera's native frame and that box = visible distortion. Fixed two
+ways:
+- Cells are now 3:4, the same ratio as the live `.camera-frame`
+  preview, so the exported strip matches what you actually framed
+  on screen.
+- Photos are drawn with a new `drawImageCover()` helper that crops
+  to fill the cell — the canvas equivalent of CSS
+  `object-fit: cover` — instead of stretching.
+
+**The strip decoration was "barely anything."** The old version drew
+tiny emoji glyphs (34px, in a 28px margin) via `fillText`. Replaced
+with real vector artwork drawn straight on the canvas:
+- a blossom sprig, a sparkle, a traced heart, and scattered confetti
+  pieces — one real shape per template, sized to actually be seen,
+  placed at the four corners plus a larger centred flourish above
+  the watermark
+- every template (including Classic) now also gets the dashed
+  "perforation" line run the full height of the strip — the same
+  motif already used around the on-screen result frame in CSS, now
+  carried into the exported image itself, so there's a real
+  through-line between capture and print rather than nothing at all
+  for Classic.
+
+Remember to bump the `?v=` cache-busting number (now `2.2.0`) when
+you deploy this — see the section below.
+
+## What was actually broken (v2.1.0)
 
 Looking at your screenshots against your source, the code you had was
 already correct — the swatch-picker JS and the mirrored-capture logic
