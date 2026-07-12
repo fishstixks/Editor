@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Digital Photobooth</title>
+
+<!-- iOS Web App Metadata -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Digital Photobooth">
+<meta name="theme-color" content="#0d0b14">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Global error placeholder -->
+<p id="cameraError" hidden></p>
+
+<!-- Flash overlay (used across camera/capture) -->
+<div id="flash" class="flash" aria-hidden="true"></div>
+
+<!-- ============ WELCOME SCREEN ============ -->
+<section id="welcomeScreen" class="screen screen-active">
+  <div class="welcome-inner">
+    <p class="eyebrow">디지털 포토부스</p>
+    <h1 class="brand-title">DIGITAL<br>PHOTOBOOTH</h1>
+    <p class="brand-sub">Capture four moments. One strip of memory.</p>
+
+    <div class="settings-row">
+      <label class="select-wrap">
+        <span>Theme</span>
+        <select id="theme">
+          <option value="noir">Noir</option>
+          <option value="blossom">Blossom</option>
+          <option value="pastel">Pastel Studio</option>
+          <option value="midnight">Midnight Neon</option>
+        </select>
+      </label>
+
+      <label class="select-wrap">
+        <span>Layout</span>
+        <select id="layout">
+          <option value="strip">Strip (4x1)</option>
+          <option value="grid">Grid (2x2)</option>
+        </select>
+      </label>
+
+      <label class="select-wrap">
+        <span>Filter</span>
+        <select id="filter">
+          <option value="normal">Normal</option>
+          <option value="bw">Black &amp; White</option>
+          <option value="warm">Warm</option>
+          <option value="cool">Cool</option>
+          <option value="vintage">Vintage</option>
+        </select>
+      </label>
+    </div>
+
+    <button id="startBtn" class="btn btn-primary" type="button">Start Session</button>
+  </div>
+</section>
+
+<!-- ============ CAMERA SCREEN ============ -->
+<section id="cameraScreen" class="screen" hidden>
+  <div class="camera-frame">
+    <video id="camera" playsinline autoplay muted></video>
+
+    <div id="countdown" class="countdown" aria-live="polite"></div>
+
+    <div class="hud-top">
+      <span id="photoCounter" class="photo-counter">0 / 4</span>
+      <button id="switchCamera" class="icon-btn" type="button" aria-label="Switch camera">⟳</button>
+    </div>
+
+    <div class="progress-track">
+      <div id="progressFill" class="progress-fill"></div>
+    </div>
+
+    <button id="cancelSession" class="btn btn-ghost" type="button">Cancel</button>
+  </div>
+</section>
+
+<!-- ============ PREVIEW SCREEN ============ -->
+<section id="previewScreen" class="screen" hidden>
+  <div class="preview-grid">
+    <img id="preview1" class="preview-photo" alt="Photo 1">
+    <img id="preview2" class="preview-photo" alt="Photo 2">
+    <img id="preview3" class="preview-photo" alt="Photo 3">
+    <img id="preview4" class="preview-photo" alt="Photo 4">
+  </div>
+  <p class="preview-caption">Nice shots! Processing your strip...</p>
+</section>
+
+<!-- ============ PROCESSING SCREEN ============ -->
+<section id="processingScreen" class="screen" hidden>
+  <div class="processing-inner">
+    <div class="spinner" aria-hidden="true"></div>
+    <p>Developing your photos...</p>
+  </div>
+</section>
+
+<!-- ============ PRINTING SCREEN ============ -->
+<section id="printingScreen" class="screen" hidden>
+  <div class="printer-rig">
+    <div class="printer-body">
+      <div class="printer-slot">
+        <div id="printPreview" class="print-preview"></div>
+      </div>
+    </div>
+    <p id="printingStatus" class="printing-status">Printing your strip...</p>
+  </div>
+</section>
+
+<!-- ============ RESULT SCREEN ============ -->
+<section id="resultScreen" class="screen" hidden>
+  <div class="result-inner">
+    <img id="resultImage" class="result-image" alt="Your photobooth strip">
+    <div class="result-actions">
+      <button id="downloadBtn" class="btn btn-primary" type="button">Download</button>
+      <button id="retakeBtn" class="btn btn-secondary" type="button">Retake</button>
+      <button id="newSession" class="btn btn-ghost" type="button">New Session</button>
+    </div>
+  </div>
+</section>
+
+<!-- Hidden export canvas (never shown to user) -->
+<canvas id="exportCanvas" hidden></canvas>
+
+<!-- Shutter sound -->
+<audio id="shutter" preload="auto">
+  <source src="data:audio/mpeg;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA////////////////////////////////////8AAAA5TEFNRTMuMTAwBLkAAAAAAAAAABQgJAUHQQAB4AAAASBypqZ5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==" type="audio/mpeg">
+</audio>
+
+<script src="photobooth.js"></script>
+</body>
+</html>

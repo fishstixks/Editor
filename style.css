@@ -1,0 +1,533 @@
+/* ============================================================
+   DIGITAL PHOTOBOOTH
+   style.css — Version 2.0.4 Alpha
+
+   Design language: quiet Korean studio-photobooth aesthetic —
+   ink black canvas, warm brushed-gold rule, blossom-pink accent,
+   soft paper-white cards. One signature move: the countdown ring
+   and the printed-strip edge both use the same dashed "perforation"
+   motif, tying capture to output.
+   ============================================================ */
+
+:root {
+  --ink: #0d0b14;
+  --ink-soft: #17141f;
+  --paper: #f7f3ee;
+  --gold: #c9a66b;
+  --blossom: #e8b4bc;
+  --blossom-deep: #d98fa0;
+  --line: rgba(247, 243, 238, 0.14);
+  --text-dim: rgba(247, 243, 238, 0.6);
+
+  --radius-lg: 28px;
+  --radius-md: 18px;
+  --radius-sm: 10px;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 180ms;
+  --dur-med: 420ms;
+  --dur-slow: 650ms;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* ---------- Theme variants (selectable via #theme) ---------- */
+body[data-theme="blossom"] {
+  --ink: #1c1319;
+  --ink-soft: #241a22;
+  --gold: #d8a8a0;
+  --blossom: #f3c9d4;
+  --blossom-deep: #e79ab0;
+}
+body[data-theme="pastel"] {
+  --ink: #221f2b;
+  --ink-soft: #2b2735;
+  --gold: #b7a6d9;
+  --blossom: #cfe7e0;
+  --blossom-deep: #9fd0c6;
+  --paper: #fbf8ff;
+}
+body[data-theme="midnight"] {
+  --ink: #06070d;
+  --ink-soft: #0c0e18;
+  --gold: #7fd7d1;
+  --blossom: #8f9bf0;
+  --blossom-deep: #5f6cd6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: "Pretendard", "Noto Sans KR", -apple-system, "Helvetica Neue",
+    Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  overflow: hidden;
+}
+
+button,
+select {
+  font-family: inherit;
+}
+
+/* ---------- Screens & transitions ---------- */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: max(24px, var(--safe-top)) max(20px, var(--safe-right)) max(24px, var(--safe-bottom))
+    max(20px, var(--safe-left));
+  opacity: 0;
+  transform: translateY(14px) scale(0.99);
+  will-change: transform, opacity;
+  transition: opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease);
+  pointer-events: none;
+}
+
+.screen.screen-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.screen.screen-hidden {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.99);
+}
+
+/* ---------- Welcome screen ---------- */
+.welcome-inner {
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+}
+
+.eyebrow {
+  letter-spacing: 0.32em;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 14px;
+}
+
+.brand-title {
+  font-family: "Songmyung", "Noto Serif KR", Georgia, serif;
+  font-size: clamp(38px, 10vw, 56px);
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  margin: 0 0 12px;
+  background: linear-gradient(180deg, var(--paper) 0%, var(--blossom) 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.brand-sub {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin: 0 0 32px;
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.select-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: left;
+}
+
+.select-wrap select {
+  background: var(--ink-soft);
+  border: 1px solid var(--line);
+  color: var(--paper);
+  border-radius: var(--radius-sm);
+  padding: 10px 8px;
+  font-size: 13px;
+  appearance: none;
+  transition: border-color var(--dur-fast) var(--ease);
+}
+
+.select-wrap select:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 16px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease),
+    opacity var(--dur-fast) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--blossom) 0%, var(--gold) 100%);
+  color: var(--ink);
+  box-shadow: 0 8px 24px -8px rgba(233, 180, 188, 0.5);
+}
+
+.btn-secondary {
+  background: var(--ink-soft);
+  color: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+}
+
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(13, 11, 20, 0.5);
+  color: var(--paper);
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.icon-btn:active {
+  transform: rotate(45deg) scale(0.92);
+}
+
+/* ---------- Camera screen ---------- */
+.camera-frame {
+  position: relative;
+  width: min(92vw, 480px);
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
+}
+
+#camera {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* mirror front camera like a mirror-booth */
+}
+
+.hud-top {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 3;
+}
+
+.photo-counter {
+  background: rgba(13, 11, 20, 0.55);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(6px);
+}
+
+.countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Songmyung", "Noto Serif KR", Georgia, serif;
+  font-size: 88px;
+  color: var(--paper);
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+  z-index: 4;
+  pointer-events: none;
+}
+
+.countdown:empty {
+  display: none;
+}
+
+.progress-track {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 76px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(247, 243, 238, 0.2);
+  overflow: hidden;
+  z-index: 3;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--blossom), var(--gold));
+  will-change: width;
+  transition: width var(--dur-fast) linear;
+}
+
+.camera-frame .btn-ghost {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+}
+
+/* ---------- Flash ---------- */
+.flash {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 999;
+  will-change: opacity;
+}
+
+.flash.flash-active {
+  animation: flashPop 260ms ease-out;
+}
+
+@keyframes flashPop {
+  0% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------- Preview screen ---------- */
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  width: min(88vw, 420px);
+  margin-bottom: 20px;
+}
+
+.preview-photo {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--ink-soft);
+  border: 1px solid var(--line);
+  opacity: 0;
+  transform: translateY(8px);
+  animation: previewIn var(--dur-med) var(--ease) forwards;
+}
+
+@keyframes previewIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.preview-caption {
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+/* ---------- Processing screen ---------- */
+.processing-inner {
+  text-align: center;
+}
+
+.spinner {
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  border-top-color: var(--gold);
+  animation: spin 900ms linear infinite;
+  will-change: transform;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Printing screen ---------- */
+.printer-rig {
+  text-align: center;
+}
+
+.printer-body {
+  width: 220px;
+  height: 90px;
+  margin: 0 auto 18px;
+  background: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md) var(--radius-md) 6px 6px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.printer-slot {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 12px;
+  background: #000;
+  border-radius: 4px;
+  overflow: visible;
+}
+
+.print-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 160px;
+  background: var(--paper);
+  border: 1px dashed rgba(13, 11, 20, 0.3);
+  border-radius: 0 0 6px 6px;
+  transform: translateY(-100%);
+  animation: paperFeed 2.4s var(--ease) forwards;
+  will-change: transform;
+}
+
+@keyframes paperFeed {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.printing-status {
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+/* ---------- Result screen ---------- */
+.result-inner {
+  text-align: center;
+  width: 100%;
+  max-width: 380px;
+}
+
+.result-image {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  margin-bottom: 22px;
+  box-shadow: 0 24px 50px -20px rgba(0, 0, 0, 0.55);
+}
+
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* ---------- Camera error banner ---------- */
+#cameraError {
+  position: fixed;
+  top: max(16px, var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: rgba(180, 60, 70, 0.95);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  max-width: 90vw;
+  text-align: center;
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Touch & mobile refinements ---------- */
+@media (max-width: 480px) {
+  .settings-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .settings-row .select-wrap:last-child {
+    grid-column: span 2;
+  }
+  .brand-title {
+    font-size: 42px;
+  }
+}
+
+@media (hover: hover) {
+  .btn:hover {
+    transform: translateY(-2px);
+  }
+  .icon-btn:hover {
+    border-color: var(--gold);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
