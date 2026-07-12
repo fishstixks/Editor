@@ -1,398 +1,450 @@
-/* ==========================================================
-   DIGITAL PHOTOBOOTH v2
-========================================================== */
+/*
+==================================================
+DIGITAL PHOTOBOOTH
+Version 2.0.1 Alpha
+==================================================
+*/
+
+:root{
+
+--bg:#eef2f7;
+--card:#ffffff;
+--text:#111827;
+--accent:#2563eb;
+--radius:26px;
+--shadow:0 18px 45px rgba(0,0,0,.12);
+
+}
 
 *{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Inter,Arial,sans-serif;
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
 }
 
 html,
 body{
-
-    width:100%;
-    height:100%;
-    overflow:hidden;
-
-    background:#111827;
-
-    color:white;
-
+width:100%;
+height:100%;
+overflow:hidden;
+background:var(--bg);
+color:var(--text);
 }
 
-/* ==========================================================
+/* ===========================
 SCREENS
-========================================================== */
+=========================== */
 
 .screen{
 
-    position:absolute;
+position:fixed;
+inset:0;
 
-    inset:0;
+display:flex;
+justify-content:center;
+align-items:center;
 
-    display:none;
+padding:24px;
 
-    justify-content:center;
+opacity:0;
+pointer-events:none;
 
-    align-items:center;
+transition:
+opacity .35s ease,
+transform .35s ease;
 
-    padding:24px;
+transform:scale(.98);
 
 }
 
 .screen.active{
 
-    display:flex;
+opacity:1;
+pointer-events:auto;
+transform:scale(1);
 
 }
 
-/* ==========================================================
+/* ===========================
 CARD
-========================================================== */
+=========================== */
 
-.card{
+.card,
+.previewCard{
 
-    width:min(420px,100%);
+width:min(430px,100%);
+background:var(--card);
 
-    background:#1f2937;
+border-radius:var(--radius);
 
-    border-radius:28px;
+padding:28px;
 
-    padding:32px;
+box-shadow:var(--shadow);
 
-    box-shadow:
-
-    0 20px 60px rgba(0,0,0,.35);
+display:flex;
+flex-direction:column;
+gap:18px;
 
 }
 
 .card h1{
 
-    text-align:center;
-
-    margin-bottom:10px;
-
-    font-size:34px;
+font-size:2rem;
+font-weight:700;
 
 }
 
 .card h2{
 
-    text-align:center;
+font-size:1.6rem;
 
 }
 
-.card p{
+.card p,
+.previewCard p{
 
-    text-align:center;
-
-    margin-bottom:28px;
-
-    color:#cbd5e1;
+opacity:.75;
+line-height:1.5;
 
 }
 
-.card label{
+label{
 
-    display:block;
+font-size:.9rem;
+font-weight:600;
 
-    margin-top:18px;
-
-    margin-bottom:8px;
-
-    font-weight:600;
+margin-top:6px;
 
 }
 
-.card select{
+select,
+button{
 
-    width:100%;
+width:100%;
 
-    height:52px;
+border:none;
 
-    border:none;
+border-radius:18px;
 
-    outline:none;
+padding:16px;
 
-    border-radius:14px;
-
-    background:#374151;
-
-    color:white;
-
-    padding:0 14px;
-
-    font-size:16px;
+font-size:1rem;
 
 }
 
-.card button{
+select{
 
-    margin-top:28px;
-
-    width:100%;
-
-    height:56px;
-
-    border:none;
-
-    border-radius:16px;
-
-    background:#2563eb;
-
-    color:white;
-
-    font-size:18px;
-
-    font-weight:700;
-
-    cursor:pointer;
+background:#f3f4f6;
 
 }
 
-.card button:hover{
+button{
 
-    background:#3b82f6;
+background:var(--accent);
+color:white;
+font-weight:700;
+cursor:pointer;
+
+transition:.25s;
 
 }
 
-/* ==========================================================
+button:hover{
+
+transform:translateY(-2px);
+
+}
+
+button:active{
+
+transform:scale(.97);
+
+}
+
+/* ===========================
 CAMERA
-========================================================== */
+=========================== */
 
 .cameraContainer{
 
-    position:relative;
+position:relative;
 
-    width:min(430px,100%);
+width:min(430px,100%);
+height:min(760px,100%);
 
-    aspect-ratio:3/4;
+overflow:hidden;
 
-    overflow:hidden;
+border-radius:30px;
 
-    border-radius:28px;
+background:black;
 
-    background:black;
-
-    box-shadow:
-
-    0 25px 60px rgba(0,0,0,.45);
+box-shadow:var(--shadow);
 
 }
 
 video{
 
-    width:100%;
+width:100%;
+height:100%;
 
-    height:100%;
-
-    object-fit:cover;
-
-    transform:scaleX(-1);
+object-fit:cover;
 
 }
 
-/* ==========================================================
+/* ===========================
 TOP BAR
-========================================================== */
+=========================== */
 
 #topBar{
 
-    position:absolute;
+position:absolute;
 
-    top:18px;
+top:18px;
+left:18px;
+right:18px;
 
-    left:18px;
+display:flex;
+justify-content:space-between;
 
-    right:18px;
-
-    display:flex;
-
-    justify-content:space-between;
+z-index:30;
 
 }
 
 #topBar button{
 
-    width:48px;
+width:54px;
+height:54px;
 
-    height:48px;
+padding:0;
 
-    border:none;
+border-radius:50%;
 
-    border-radius:50%;
+background:rgba(255,255,255,.25);
 
-    background:rgba(0,0,0,.45);
+backdrop-filter:blur(14px);
 
-    color:white;
-
-    font-size:20px;
-
-    cursor:pointer;
+font-size:1.3rem;
 
 }
 
-/* ==========================================================
+/* ===========================
 COUNTDOWN
-========================================================== */
+=========================== */
 
 #countdown{
 
-    position:absolute;
+position:absolute;
 
-    inset:0;
+left:50%;
+top:50%;
 
-    display:flex;
+transform:translate(-50%,-50%);
 
-    justify-content:center;
+font-size:6rem;
 
-    align-items:center;
+font-weight:800;
 
-    font-size:110px;
+color:white;
 
-    font-weight:900;
+text-shadow:0 8px 25px rgba(0,0,0,.45);
 
-    color:white;
-
-    text-shadow:
-
-    0 8px 20px black;
-
-    opacity:0;
+z-index:20;
 
 }
 
-.countVisible{
+/* ===========================
+COUNTER
+=========================== */
 
-    animation:countAnim 1s linear;
+#photoCounter{
 
-}
+position:absolute;
 
-@keyframes countAnim{
+bottom:72px;
 
-0%{
+left:50%;
 
-opacity:0;
+transform:translateX(-50%);
 
-transform:scale(.5);
+background:rgba(0,0,0,.45);
 
-}
+padding:10px 20px;
 
-20%{
+border-radius:999px;
 
-opacity:1;
+color:white;
 
-}
+font-weight:600;
 
-80%{
-
-opacity:1;
-
-transform:scale(1);
+backdrop-filter:blur(12px);
 
 }
 
-100%{
+/* ===========================
+PROGRESS BAR
+=========================== */
 
-opacity:0;
+#progressBar{
 
-transform:scale(1.4);
+position:absolute;
+
+left:18px;
+right:18px;
+bottom:24px;
+
+height:10px;
+
+border-radius:999px;
+
+overflow:hidden;
+
+background:rgba(255,255,255,.25);
 
 }
 
+#progressFill{
+
+width:0%;
+
+height:100%;
+
+background:white;
+
+transition:width .45s ease;
+
 }
 
-/* ==========================================================
+/* ===========================
 FLASH
-========================================================== */
+=========================== */
 
 #flash{
 
-    position:absolute;
+position:fixed;
 
-    inset:0;
+inset:0;
 
-    background:white;
-
-    opacity:0;
-
-    pointer-events:none;
-
-}
-
-.flashAnim{
-
-    animation:flash .35s ease;
-
-}
-
-@keyframes flash{
-
-0%{
+background:white;
 
 opacity:0;
 
+pointer-events:none;
+
+z-index:999;
+
 }
 
-35%{
+#flash.active{
+
+animation:flashAnim .35s;
+
+}
+
+@keyframes flashAnim{
+
+0%{opacity:0;}
+30%{opacity:1;}
+100%{opacity:0;}
+
+}
+
+/* ===========================
+PREVIEW
+=========================== */
+
+.previewCard{
+
+align-items:center;
+
+}
+
+#previewGrid{
+
+display:grid;
+
+grid-template-columns:repeat(2,1fr);
+
+gap:14px;
+
+width:100%;
+
+}
+
+#previewGrid img{
+
+width:100%;
+
+aspect-ratio:3/4;
+
+border-radius:16px;
+
+object-fit:cover;
+
+background:#e5e7eb;
+
+box-shadow:0 8px 20px rgba(0,0,0,.12);
+
+opacity:0;
+
+animation:fadeUp .45s forwards;
+
+}
+
+#previewGrid img:nth-child(2){
+
+animation-delay:.08s;
+
+}
+
+#previewGrid img:nth-child(3){
+
+animation-delay:.16s;
+
+}
+
+#previewGrid img:nth-child(4){
+
+animation-delay:.24s;
+
+}
+
+@keyframes fadeUp{
+
+from{
+
+opacity:0;
+transform:translateY(15px);
+
+}
+
+to{
 
 opacity:1;
-
-}
-
-100%{
-
-opacity:0;
+transform:none;
 
 }
 
 }
 
-/* ==========================================================
-PHOTO COUNTER
-========================================================== */
-
-#progress{
-
-    position:absolute;
-
-    bottom:20px;
-
-    left:50%;
-
-    transform:translateX(-50%);
-
-    padding:10px 20px;
-
-    border-radius:999px;
-
-    background:rgba(0,0,0,.45);
-
-    font-weight:700;
-
-}
-
-/* ==========================================================
+/* ===========================
 LOADER
-========================================================== */
+=========================== */
 
 .loader{
 
-    width:70px;
+width:70px;
+height:70px;
 
-    height:70px;
+border-radius:50%;
 
-    border-radius:50%;
+border:6px solid #e5e7eb;
 
-    border:6px solid rgba(255,255,255,.15);
+border-top-color:var(--accent);
 
-    border-top:6px solid white;
+margin:auto;
 
-    margin:20px auto;
-
-    animation:spin 1s linear infinite;
+animation:spin .8s linear infinite;
 
 }
 
@@ -405,349 +457,198 @@ transform:rotate(360deg);
 }
 
 }
-/* ==========================================================
+
+/* ===========================
 PRINTER
-========================================================== */
+=========================== */
 
 .printer{
 
-    width:min(360px,100%);
+width:min(340px,100%);
 
-    display:flex;
+background:#2c2f37;
 
-    flex-direction:column;
+border-radius:26px;
 
-    align-items:center;
+overflow:hidden;
+
+box-shadow:var(--shadow);
 
 }
 
 .printerTop{
 
-    width:100%;
+padding:18px;
 
-    background:#2b2b2b;
+text-align:center;
 
-    color:white;
+background:#1b1d22;
 
-    padding:22px;
+color:white;
 
-    text-align:center;
+font-weight:700;
 
-    font-weight:700;
-
-    letter-spacing:2px;
-
-    border-radius:20px 20px 0 0;
+letter-spacing:2px;
 
 }
 
 .paperArea{
 
-    width:100%;
+height:460px;
 
-    height:480px;
+display:flex;
 
-    background:#0f172a;
+justify-content:center;
+align-items:flex-start;
 
-    overflow:hidden;
+overflow:hidden;
 
-    display:flex;
-
-    justify-content:center;
-
-    align-items:flex-start;
-
-    border-radius:0 0 20px 20px;
+background:#444;
 
 }
 
-.paperArea img{
+#printPreview{
 
-    width:240px;
+width:78%;
 
-    background:white;
+margin-top:-100%;
 
-    border-radius:0 0 12px 12px;
-
-    transform:translateY(-100%);
-
-    box-shadow:
-
-    0 10px 30px rgba(0,0,0,.4);
+animation:paperFeed 3s forwards ease;
 
 }
 
-.paperPrint{
+@keyframes paperFeed{
 
-    animation:paperPrint 3.5s ease forwards;
+to{
 
-}
-
-@keyframes paperPrint{
-
-0%{
-
-transform:translateY(-100%);
-
-}
-
-100%{
-
-transform:translateY(0);
+margin-top:24px;
 
 }
 
 }
 
-/* ==========================================================
+#printingStatus{
+
+margin-top:26px;
+
+font-size:1.1rem;
+
+font-weight:600;
+
+}
+
+/* ===========================
 RESULT
-========================================================== */
+=========================== */
 
 #resultScreen{
 
-    flex-direction:column;
-
-    gap:24px;
+flex-direction:column;
+gap:26px;
 
 }
 
 #resultImage{
 
-    width:min(320px,90vw);
+max-width:340px;
+max-height:75vh;
 
-    max-height:80vh;
+border-radius:20px;
 
-    object-fit:contain;
-
-    border-radius:20px;
-
-    background:white;
-
-    box-shadow:
-
-    0 25px 70px rgba(0,0,0,.45);
+box-shadow:var(--shadow);
 
 }
 
 .buttons{
 
-    display:flex;
+display:flex;
 
-    gap:16px;
+gap:12px;
 
-    flex-wrap:wrap;
-
-    justify-content:center;
+width:min(430px,100%);
 
 }
 
 .buttons button{
 
-    min-width:150px;
-
-    height:52px;
-
-    border:none;
-
-    border-radius:14px;
-
-    font-size:16px;
-
-    font-weight:700;
-
-    cursor:pointer;
-
-    color:white;
-
-    transition:.25s;
+flex:1;
 
 }
 
-#downloadBtn{
-
-    background:#16a34a;
-
-}
-
-#downloadBtn:hover{
-
-    background:#22c55e;
-
-}
-
-#newSession{
-
-    background:#2563eb;
-
-}
-
-#newSession:hover{
-
-    background:#3b82f6;
-
-}
-
-/* ==========================================================
+/* ===========================
 THEMES
-========================================================== */
+=========================== */
 
-body.theme-classic{
+.theme-classic{
 
-    background:#111827;
-
-}
-
-body.theme-black{
-
-    background:#000;
+--bg:#eef2f7;
+--card:#ffffff;
+--text:#111827;
+--accent:#2563eb;
 
 }
 
-body.theme-pink{
+.theme-black{
 
-    background:#ec4899;
-
-}
-
-body.theme-blue{
-
-    background:#2563eb;
+--bg:#111827;
+--card:#1f2937;
+--text:#f9fafb;
+--accent:#f3f4f6;
 
 }
 
-body.theme-mint{
+.theme-pink{
 
-    background:#10b981;
-
-}
-
-body.theme-cream{
-
-    background:#f5f5dc;
-
-    color:#111;
+--bg:#ffe8ef;
+--card:#fff7fa;
+--text:#5c2944;
+--accent:#ec4899;
 
 }
 
-body.theme-cream .card{
+.theme-blue{
 
-    background:white;
-
-    color:#111;
-
-}
-
-body.theme-cream select{
-
-    color:#111;
-
-    background:#ececec;
+--bg:#dff4ff;
+--card:#ffffff;
+--text:#14314d;
+--accent:#0ea5e9;
 
 }
 
-body.theme-cream button{
+.theme-mint{
 
-    color:white;
-
-}
-
-/* ==========================================================
-FADE ANIMATIONS
-========================================================== */
-
-.fadeIn{
-
-    animation:fadeIn .35s ease;
+--bg:#e8fff6;
+--card:#ffffff;
+--text:#134e4a;
+--accent:#10b981;
 
 }
 
-.fadeOut{
+.theme-cream{
 
-    animation:fadeOut .35s ease;
-
-}
-
-@keyframes fadeIn{
-
-from{
-
-opacity:0;
-
-transform:translateY(20px);
+--bg:#f8f2e9;
+--card:#fffdfa;
+--text:#5a4635;
+--accent:#c08457;
 
 }
 
-to{
+/* ===========================
+PHONE
+=========================== */
 
-opacity:1;
+@media(max-width:480px){
 
-transform:none;
+.card,
+.previewCard{
 
-}
-
-}
-
-@keyframes fadeOut{
-
-from{
-
-opacity:1;
-
-}
-
-to{
-
-opacity:0;
-
-}
-
-}
-
-/* ==========================================================
-MOBILE
-========================================================== */
-
-@media (max-width:768px){
-
-.card{
-
-padding:24px;
-
-}
-
-.card h1{
-
-font-size:28px;
-
-}
-
-.cameraContainer{
-
-border-radius:20px;
+padding:22px;
 
 }
 
 #countdown{
 
-font-size:90px;
-
-}
-
-.paperArea{
-
-height:380px;
-
-}
-
-.paperArea img{
-
-width:200px;
-
-}
-
-#resultImage{
-
-width:85vw;
+font-size:5rem;
 
 }
 
@@ -755,58 +656,6 @@ width:85vw;
 
 flex-direction:column;
 
-width:100%;
-
-}
-
-.buttons button{
-
-width:100%;
-
 }
 
 }
-
-/* ==========================================================
-SMALL PHONES
-========================================================== */
-
-@media (max-width:430px){
-
-.card{
-
-padding:18px;
-
-}
-
-.card h1{
-
-font-size:24px;
-
-}
-
-.card select{
-
-height:48px;
-
-}
-
-.card button{
-
-height:52px;
-
-}
-
-#progress{
-
-font-size:14px;
-
-padding:8px 16px;
-
-}
-
-}
-
-/* ==========================================================
-END
-========================================================== */
