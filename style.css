@@ -405,3 +405,408 @@ transform:rotate(360deg);
 }
 
 }
+/* ==========================================================
+PRINTER
+========================================================== */
+
+.printer{
+
+    width:min(360px,100%);
+
+    display:flex;
+
+    flex-direction:column;
+
+    align-items:center;
+
+}
+
+.printerTop{
+
+    width:100%;
+
+    background:#2b2b2b;
+
+    color:white;
+
+    padding:22px;
+
+    text-align:center;
+
+    font-weight:700;
+
+    letter-spacing:2px;
+
+    border-radius:20px 20px 0 0;
+
+}
+
+.paperArea{
+
+    width:100%;
+
+    height:480px;
+
+    background:#0f172a;
+
+    overflow:hidden;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:flex-start;
+
+    border-radius:0 0 20px 20px;
+
+}
+
+.paperArea img{
+
+    width:240px;
+
+    background:white;
+
+    border-radius:0 0 12px 12px;
+
+    transform:translateY(-100%);
+
+    box-shadow:
+
+    0 10px 30px rgba(0,0,0,.4);
+
+}
+
+.paperPrint{
+
+    animation:paperPrint 3.5s ease forwards;
+
+}
+
+@keyframes paperPrint{
+
+0%{
+
+transform:translateY(-100%);
+
+}
+
+100%{
+
+transform:translateY(0);
+
+}
+
+}
+
+/* ==========================================================
+RESULT
+========================================================== */
+
+#resultScreen{
+
+    flex-direction:column;
+
+    gap:24px;
+
+}
+
+#resultImage{
+
+    width:min(320px,90vw);
+
+    max-height:80vh;
+
+    object-fit:contain;
+
+    border-radius:20px;
+
+    background:white;
+
+    box-shadow:
+
+    0 25px 70px rgba(0,0,0,.45);
+
+}
+
+.buttons{
+
+    display:flex;
+
+    gap:16px;
+
+    flex-wrap:wrap;
+
+    justify-content:center;
+
+}
+
+.buttons button{
+
+    min-width:150px;
+
+    height:52px;
+
+    border:none;
+
+    border-radius:14px;
+
+    font-size:16px;
+
+    font-weight:700;
+
+    cursor:pointer;
+
+    color:white;
+
+    transition:.25s;
+
+}
+
+#downloadBtn{
+
+    background:#16a34a;
+
+}
+
+#downloadBtn:hover{
+
+    background:#22c55e;
+
+}
+
+#newSession{
+
+    background:#2563eb;
+
+}
+
+#newSession:hover{
+
+    background:#3b82f6;
+
+}
+
+/* ==========================================================
+THEMES
+========================================================== */
+
+body.theme-classic{
+
+    background:#111827;
+
+}
+
+body.theme-black{
+
+    background:#000;
+
+}
+
+body.theme-pink{
+
+    background:#ec4899;
+
+}
+
+body.theme-blue{
+
+    background:#2563eb;
+
+}
+
+body.theme-mint{
+
+    background:#10b981;
+
+}
+
+body.theme-cream{
+
+    background:#f5f5dc;
+
+    color:#111;
+
+}
+
+body.theme-cream .card{
+
+    background:white;
+
+    color:#111;
+
+}
+
+body.theme-cream select{
+
+    color:#111;
+
+    background:#ececec;
+
+}
+
+body.theme-cream button{
+
+    color:white;
+
+}
+
+/* ==========================================================
+FADE ANIMATIONS
+========================================================== */
+
+.fadeIn{
+
+    animation:fadeIn .35s ease;
+
+}
+
+.fadeOut{
+
+    animation:fadeOut .35s ease;
+
+}
+
+@keyframes fadeIn{
+
+from{
+
+opacity:0;
+
+transform:translateY(20px);
+
+}
+
+to{
+
+opacity:1;
+
+transform:none;
+
+}
+
+}
+
+@keyframes fadeOut{
+
+from{
+
+opacity:1;
+
+}
+
+to{
+
+opacity:0;
+
+}
+
+}
+
+/* ==========================================================
+MOBILE
+========================================================== */
+
+@media (max-width:768px){
+
+.card{
+
+padding:24px;
+
+}
+
+.card h1{
+
+font-size:28px;
+
+}
+
+.cameraContainer{
+
+border-radius:20px;
+
+}
+
+#countdown{
+
+font-size:90px;
+
+}
+
+.paperArea{
+
+height:380px;
+
+}
+
+.paperArea img{
+
+width:200px;
+
+}
+
+#resultImage{
+
+width:85vw;
+
+}
+
+.buttons{
+
+flex-direction:column;
+
+width:100%;
+
+}
+
+.buttons button{
+
+width:100%;
+
+}
+
+}
+
+/* ==========================================================
+SMALL PHONES
+========================================================== */
+
+@media (max-width:430px){
+
+.card{
+
+padding:18px;
+
+}
+
+.card h1{
+
+font-size:24px;
+
+}
+
+.card select{
+
+height:48px;
+
+}
+
+.card button{
+
+height:52px;
+
+}
+
+#progress{
+
+font-size:14px;
+
+padding:8px 16px;
+
+}
+
+}
+
+/* ==========================================================
+END
+========================================================== */
