@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free Local Video Template Studio</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+  <div class="max-w-md w-full bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700">
+    <h1 class="text-2xl font-bold text-center mb-1 text-emerald-400">Local Edit Studio</h1>
+    <p class="text-slate-400 text-xs text-center mb-6">Device-powered editing. Zero servers. 100% free forever.</p>
+
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Upload Photo or Video</label>
+        <input type="file" id="mediaInput" accept="image/*,video/*" 
+               class="w-full p-2 rounded-lg bg-slate-900 border border-slate-700 text-sm file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Choose Template Style</label>
+        <select id="templateSelect" class="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 text-sm focus:outline-none focus:border-emerald-500">
+          <option value="pulse">Cinematic Pulse Zoom</option>
+          <option value="cyber">Cyberpunk Neon Shift</option>
+          <option value="vintage">Vintage Monochromatic Flash</option>
+        </select>
+      </div>
+
+      <button id="generateBtn" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 rounded-lg font-semibold transition text-sm shadow-lg shadow-emerald-900/30">
+        Generate Template Edit
+      </button>
+    </div>
+
+    <canvas id="processingCanvas" class="hidden"></canvas>
+
+    <div id="outputSection" class="mt-6 border-t border-slate-700 pt-6 hidden text-center">
+      <h2 class="text-md font-semibold mb-3 text-slate-300">Processing Your Edit...</h2>
+      <div id="loadingBar" class="w-full bg-slate-900 rounded-full h-2 mb-4 overflow-hidden">
+        <div id="progressBar" class="bg-emerald-500 h-2 w-0 transition-all duration-100"></div>
+      </div>
+      <div id="resultContainer" class="hidden">
+        <h2 class="text-md font-semibold mb-3 text-emerald-400">Your Edit Is Ready!</h2>
+        <video id="outputVideo" controls class="w-full rounded-lg shadow-md bg-black mb-4"></video>
+        <a id="downloadBtn" download="my-ai-edit.mp4" class="inline-block w-full text-center py-2.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition">
+          Save to iPhone Camera Roll
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const mediaInput = document.getElementById('mediaInput');
+    const templateSelect = document.getElementById('templateSelect');
+    const generateBtn = document.getElementById('generateBtn');
+    const outputSection = document.getElementById('outputSection');
+    const loadingBar = document.getElementById('loadingBar');
+    const progressBar = document.getElementById('progressBar');
+    const resultContainer = document.getElementById('resultContainer');
+    const outputVideo = document.getElementById('outputVideo');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const canvas = document.getElementById('processingCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let animationFrameId;
+
+    generateBtn.addEventListener('click', async () => {
+      const file = mediaInput.files[0];
+      if (!file) return alert('Please upload an image or video first!');
+
+      // Reset UI state
+      outputSection.classList.remove('hidden');
+      loadingBar.classList.remove('hidden');
+      resultContainer.classList.add('hidden');
+      progressBar.style.w = '0%';
+      
+      const fileUrl = URL.createObjectURL(file);
+      const isVideo = file.type.startsWith('video');
+
+      if (isVideo) {
+        const video = document.createElement('video');
+        video.src = fileUrl;
+        video.muted = true;
+        video.playsInline = true;
+        video.crossOrigin = 'anonymous';
+        video.onloadeddata = () => startRendering(video, true);
+        video.load();
+      } else {
+        const img = new Image();
+        img.src = fileUrl;
+        img.onload = () => startRendering(img, false);
+      }
+    });
+
+    function startRendering(mediaElement, isVideo) {
+      // Set fixed vertical output resolution (perfect for TikTok/Reels)
+      canvas.width = 720;
+      canvas.height = 1280;
+
+      const duration = 5000; // 5 second template duration
+      const fps = 30;
+      const totalFrames = (duration / 1000) * fps;
+      let currentFrame = 0;
+
+      // Capture the canvas stream
+      const stream = canvas.captureStream(fps);
+      
+      // Determine supported recording format on iOS
+      let options = { mimeType: 'video/mp4' };
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options = { mimeType: 'video/webm' };
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, options);
+      const chunks = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/mp4' });
+        const videoUrl = URL.createObjectURL(blob);
+        outputVideo.src = videoUrl;
+        downloadBtn.href = videoUrl;
+        
+        loadingBar.classList.add('hidden');
+        resultContainer.classList.remove('hidden');
+      };
+
+      if (isVideo) mediaElement.play();
+      mediaRecorder.start();
+
+      function drawFrame() {
+        if (currentFrame >= totalFrames) {
+          cancelAnimationFrame(animationFrameId);
+          mediaRecorder.stop();
+          if (isVideo) mediaElement.pause();
+          return;
+        }
+
+        // 1. Base math computations for standard template mechanics
+        const progress = currentFrame / totalFrames;
+        progressBar.style.width = `${Math.floor(progress * 100)}%`;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 2. Select visual algorithm parameters based on chosen template
+        let scale = 1.0;
+        const selectedTemplate = templateSelect.value;
+
+        if (selectedTemplate === 'pulse') {
+          // Dynamic periodic zooming math
+          scale = 1.1 + Math.sin(progress * Math.PI * 4) * 0.1;
+        } else if (selectedTemplate === 'cyber') {
+          // Constant progressive scale expansion
+          scale = 1.0 + (progress * 0.25);
+        } else if (selectedTemplate === 'vintage') {
+          // Subtle linear push scale
+          scale = 1.05 + (progress * 0.1);
+        }
+
+        // 3. Compute frame dimensions to ensure aspect ratio preservation
+        const elementWidth = isVideo ? mediaElement.videoWidth : mediaElement.width;
+        const elementHeight = isVideo ? mediaElement.videoHeight : mediaElement.height;
+        
+        const scaleFactor = Math.max(canvas.width / elementWidth, canvas.height / elementHeight) * scale;
+        const newWidth = elementWidth * scaleFactor;
+        const newHeight = elementHeight * scaleFactor;
+        const x = (canvas.width - newWidth) / 2;
+        const y = (canvas.height - newHeight) / 2;
+
+        // 4. Render base media frame into local canvas architecture
+        ctx.drawImage(mediaElement, x, y, newWidth, newHeight);
+
+        // 5. Apply programmatic post-processing filters
+        if (selectedTemplate === 'cyber') {
+          ctx.globalCompositeOperation = 'screen';
+          ctx.fillStyle = `rgba(244, 63, 94, ${0.15 + Math.sin(progress * 20) * 0.05})`;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = `rgba(6, 182, 212, ${0.15 + Math.cos(progress * 20) * 0.05})`;
+          ctx.fillRect(5, 5, canvas.width, canvas.height);
+          ctx.globalCompositeOperation = 'source-over';
+        } else if (selectedTemplate === 'vintage') {
+          // Apply computational luma adjustments directly over screen coordinates
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+          if (Math.floor(currentFrame) % 15 === 0) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; // Emulate film exposure spike
+          }
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Apply modern client-side pixel manipulation filter
+          ctx.backdropFilter = 'grayscale(100%)'; 
+          // Fallback composite layer filter layer
+          ctx.globalCompositeOperation = 'color';
+          ctx.fillStyle = '#888888';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.globalCompositeOperation = 'source-over';
+        }
+
+        currentFrame++;
+        animationFrameId = requestAnimationFrame(drawFrame);
+      }
+
+      drawFrame();
+    }
+  </script>
+</body>
+</html>
