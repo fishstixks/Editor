@@ -1,0 +1,254 @@
+/* ==========================================
+   DIGITAL PHOTOBOOTH
+   STYLE.CSS
+========================================== */
+
+html,
+body{
+    margin:0;
+    padding:0;
+}
+
+/* Smooth fade animations */
+
+*{
+    transition:all .25s ease;
+}
+
+/* ============================
+   FLASH EFFECT
+============================ */
+
+#flashOverlay{
+
+    position:fixed;
+
+    inset:0;
+
+    background:white;
+
+    opacity:0;
+
+    pointer-events:none;
+
+    z-index:9999;
+
+}
+
+.flash{
+
+    animation:flash .35s ease;
+
+}
+
+@keyframes flash{
+
+    0%{
+
+        opacity:0;
+
+    }
+
+    40%{
+
+        opacity:1;
+
+    }
+
+    100%{
+
+        opacity:0;
+
+    }
+
+}
+
+/* ============================
+   PRINTER
+============================ */
+
+.printer{
+
+    width:100%;
+
+    max-width:320px;
+
+    margin:auto;
+
+}
+
+.printer-top{
+
+    background:#2f3640;
+
+    color:white;
+
+    padding:18px;
+
+    border-radius:18px 18px 0 0;
+
+    text-align:center;
+
+    font-weight:bold;
+
+    letter-spacing:2px;
+
+}
+
+.paper-slot{
+
+    background:#111827;
+
+    height:420px;
+
+    overflow:hidden;
+
+    border-radius:0 0 18px 18px;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:flex-start;
+
+}
+
+.paper-slot img{
+
+    width:240px;
+
+    background:white;
+
+    border-radius:0 0 12px 12px;
+
+    transform:translateY(-100%);
+
+}
+
+/* Paper comes out of printer */
+
+.printing{
+
+    animation:printPaper 3s ease forwards;
+
+}
+
+@keyframes printPaper{
+
+    0%{
+
+        transform:translateY(-100%);
+
+    }
+
+    100%{
+
+        transform:translateY(0);
+
+    }
+
+}
+
+/* ============================
+   COUNTDOWN
+============================ */
+
+#countdown{
+
+    animation:pop .5s ease infinite;
+
+}
+
+@keyframes pop{
+
+    0%{
+
+        transform:scale(.7);
+
+    }
+
+    50%{
+
+        transform:scale(1.1);
+
+    }
+
+    100%{
+
+        transform:scale(1);
+
+    }
+
+}
+
+/* ============================
+   PREVIEW
+============================ */
+
+#previewImage{
+
+    box-shadow:
+
+        0 20px 40px rgba(0,0,0,.35);
+
+}
+
+/* ============================
+   BUTTONS
+============================ */
+
+button{
+
+    cursor:pointer;
+
+}
+
+button:active{
+
+    transform:scale(.97);
+
+}
+
+/* ============================
+   SCROLLBAR
+============================ */
+
+::-webkit-scrollbar{
+
+    width:8px;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+    background:#475569;
+
+    border-radius:20px;
+
+}
+
+/* ============================
+   SMALL SCREEN
+============================ */
+
+@media(max-width:500px){
+
+.printer-top{
+
+    font-size:14px;
+
+}
+
+.paper-slot{
+
+    height:360px;
+
+}
+
+.paper-slot img{
+
+    width:200px;
+
+}
+
+}
