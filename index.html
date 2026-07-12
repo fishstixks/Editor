@@ -5,223 +5,297 @@
 
 <meta charset="UTF-8">
 
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0,viewport-fit=cover">
 
-<title>Digital Photobooth</title>
+<title>Digital Photobooth v2.0.0 Alpha</title>
 
-<link rel="stylesheet" href="style.css">
+<link
+rel="stylesheet"
+href="style.css?v=2.0.0">
+
+<meta
+name="theme-color"
+content="#111827">
 
 </head>
 
-<body>
+<body class="theme-classic">
 
-<!-- ==========================================
-WELCOME SCREEN
-========================================== -->
+<!-- Flash -->
 
-<div id="welcomeScreen" class="screen active">
+<div id="flash"></div>
 
-    <div class="card">
+<!-- Hidden canvas used for exporting -->
 
-        <h1>📸 Digital Photobooth</h1>
+<canvas
+id="exportCanvas"
+hidden>
+</canvas>
 
-        <p>Create your own Korean-style photostrip.</p>
+<!-- ======================================
+WELCOME
+====================================== -->
 
-        <label>Theme</label>
+<section
+id="welcomeScreen"
+class="screen active">
 
-        <select id="theme">
+<div class="card">
 
-            <option value="classic">Classic White</option>
+<h1>📸 Digital Photobooth</h1>
 
-            <option value="black">Midnight Black</option>
+<p>Create your own premium photostrip.</p>
 
-            <option value="pink">Cherry Blossom</option>
+<label>
 
-            <option value="blue">Ocean Blue</option>
+Theme
 
-            <option value="mint">Mint Green</option>
+</label>
 
-            <option value="cream">Cream</option>
+<select id="theme">
 
-        </select>
+<option value="classic">Classic White</option>
 
-        <label>Layout</label>
+<option value="black">Midnight</option>
 
-        <select id="layout">
+<option value="pink">Cherry Blossom</option>
 
-            <option value="strip">4 Photo Strip</option>
+<option value="blue">Ocean</option>
 
-            <option value="grid">2 × 2 Grid</option>
+<option value="mint">Mint</option>
 
-        </select>
+<option value="cream">Cream</option>
 
-        <label>Filter</label>
+</select>
 
-        <select id="filter">
+<label>
 
-            <option value="none">Normal</option>
+Layout
 
-            <option value="bw">Black & White</option>
+</label>
 
-            <option value="warm">Warm</option>
+<select id="layout">
 
-            <option value="cool">Cool</option>
+<option value="strip">
 
-            <option value="vintage">Vintage</option>
+4 Photo Strip
 
-        </select>
+</option>
 
-        <button id="startBtn">
+<option value="grid">
 
-            Start Booth
+2 × 2 Grid
 
-        </button>
+</option>
 
-    </div>
+</select>
 
-</div>
+<label>
 
-<!-- ==========================================
-CAMERA SCREEN
-========================================== -->
+Filter
 
-<div id="cameraScreen" class="screen">
+</label>
 
-    <div class="cameraContainer">
+<select id="filter">
 
-        <video
-            id="camera"
-            autoplay
-            playsinline
-            muted>
-        </video>
+<option value="none">Normal</option>
 
-        <div id="flash"></div>
+<option value="bw">Black & White</option>
 
-        <div id="countdown">
+<option value="warm">Warm</option>
 
-            3
+<option value="cool">Cool</option>
 
-        </div>
+<option value="vintage">
 
-        <div id="progress">
+Vintage
 
-            Photo 1 / 4
+</option>
 
-        </div>
+</select>
 
-        <div id="topBar">
+<button id="startBtn">
 
-            <button id="switchCamera">
+Start Session
 
-                🔄
-
-            </button>
-
-            <button id="cancelSession">
-
-                ✖
-
-            </button>
-
-        </div>
-
-    </div>
+</button>
 
 </div>
 
-<!-- ==========================================
+</section>
+
+<!-- ======================================
+CAMERA
+====================================== -->
+
+<section
+id="cameraScreen"
+class="screen">
+
+<div class="cameraContainer">
+
+<video
+id="camera"
+autoplay
+playsinline
+muted>
+</video>
+
+<div id="countdown">
+
+3
+
+</div>
+
+<div id="photoCounter">
+
+Photo 1 / 4
+
+</div>
+
+<div id="progressBar">
+
+<div id="progressFill"></div>
+
+</div>
+
+<div id="topBar">
+
+<button id="switchCamera">
+
+🔄
+
+</button>
+
+<button id="cancelSession">
+
+✕
+
+</button>
+
+</div>
+
+</div>
+
+</section>
+
+<!-- ======================================
 PROCESSING
-========================================== -->
+====================================== -->
 
-<div id="processingScreen" class="screen">
+<section
+id="processingScreen"
+class="screen">
 
-    <div class="card">
+<div class="card">
 
-        <h2>
+<h2>
 
-            Processing Photos...
+Processing...
 
-        </h2>
+</h2>
 
-        <div class="loader"></div>
+<div class="loader"></div>
 
-        <p>
+<p>
 
-            Creating your photostrip...
+Creating your photostrip
 
-        </p>
-
-    </div>
+</p>
 
 </div>
 
-<!-- ==========================================
+</section>
+
+<!-- ======================================
 PRINTING
-========================================== -->
+====================================== -->
 
-<div id="printingScreen" class="screen">
+<section
+id="printingScreen"
+class="screen">
 
-    <div class="printer">
+<div class="printer">
 
-        <div class="printerTop">
+<div class="printerTop">
 
-            DIGITAL PHOTOBOOTH
-
-        </div>
-
-        <div class="paperArea">
-
-            <img
-                id="printPreview">
-        </div>
-
-    </div>
-
-    <p>
-
-        Printing...
-
-    </p>
+DIGITAL PHOTOBOOTH
 
 </div>
 
-<!-- ==========================================
+<div class="paperArea">
+
+<img
+id="printPreview">
+
+</div>
+
+</div>
+
+<p id="printingStatus">
+
+Printing...
+
+</p>
+
+</section>
+
+<!-- ======================================
 RESULT
-========================================== -->
+====================================== -->
 
-<div id="resultScreen" class="screen">
+<section
+id="resultScreen"
+class="screen">
 
-    <img id="resultImage">
+<img
+id="resultImage">
 
-    <div class="buttons">
+<div class="buttons">
 
-        <button id="downloadBtn">
+<button
+id="downloadBtn">
 
-            Download
+Download
 
-        </button>
+</button>
 
-        <button id="newSession">
+<button
+id="retakeBtn">
 
-            New Session
+Retake
 
-        </button>
+</button>
 
-    </div>
+<button
+id="newSession">
+
+New Session
+
+</button>
 
 </div>
 
-<audio id="shutter">
+</section>
 
-    <source
-        src="assets/shutter.mp3"
-        type="audio/mpeg">
+<!-- Hidden shutter sound -->
+
+<audio
+id="shutter"
+preload="auto">
+
+<source
+src="assets/shutter.mp3"
+type="audio/mpeg">
 
 </audio>
 
-<script src="photobooth.js"></script>
+<script
+src="photobooth.js?v=2.0.0">
+
+</script>
 
 </body>
 
