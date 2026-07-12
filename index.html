@@ -9,11 +9,11 @@
 name="viewport"
 content="width=device-width, initial-scale=1.0,viewport-fit=cover">
 
-<title>Digital Photobooth v2.0.0 Alpha</title>
+<title>Digital Photobooth v2.0.1 Alpha</title>
 
 <link
 rel="stylesheet"
-href="style.css?v=2.0.0">
+href="style.css?v=2.0.1">
 
 <meta
 name="theme-color"
@@ -49,77 +49,52 @@ class="screen active">
 <p>Create your own premium photostrip.</p>
 
 <label>
-
 Theme
-
 </label>
 
 <select id="theme">
 
 <option value="classic">Classic White</option>
-
 <option value="black">Midnight</option>
-
 <option value="pink">Cherry Blossom</option>
-
 <option value="blue">Ocean</option>
-
 <option value="mint">Mint</option>
-
 <option value="cream">Cream</option>
 
 </select>
 
 <label>
-
 Layout
-
 </label>
 
 <select id="layout">
 
 <option value="strip">
-
 4 Photo Strip
-
 </option>
 
 <option value="grid">
-
 2 × 2 Grid
-
 </option>
 
 </select>
 
 <label>
-
 Filter
-
 </label>
 
 <select id="filter">
 
 <option value="none">Normal</option>
-
 <option value="bw">Black & White</option>
-
 <option value="warm">Warm</option>
-
 <option value="cool">Cool</option>
-
-<option value="vintage">
-
-Vintage
-
-</option>
+<option value="vintage">Vintage</option>
 
 </select>
 
 <button id="startBtn">
-
 Start Session
-
 </button>
 
 </div>
@@ -144,38 +119,57 @@ muted>
 </video>
 
 <div id="countdown">
-
 3
-
 </div>
 
 <div id="photoCounter">
-
 Photo 1 / 4
-
 </div>
 
 <div id="progressBar">
-
 <div id="progressFill"></div>
-
 </div>
 
 <div id="topBar">
 
 <button id="switchCamera">
-
 🔄
-
 </button>
 
 <button id="cancelSession">
-
 ✕
-
 </button>
 
 </div>
+
+</div>
+
+</section>
+
+<!-- ======================================
+PHOTO PREVIEW
+====================================== -->
+
+<section
+id="previewScreen"
+class="screen">
+
+<div class="previewCard">
+
+<h2>Your Photos</h2>
+
+<div id="previewGrid">
+
+<img id="preview1">
+<img id="preview2">
+<img id="preview3">
+<img id="preview4">
+
+</div>
+
+<p>
+Preparing your photostrip...
+</p>
 
 </div>
 
@@ -192,17 +186,13 @@ class="screen">
 <div class="card">
 
 <h2>
-
 Processing...
-
 </h2>
 
 <div class="loader"></div>
 
 <p>
-
 Creating your photostrip
-
 </p>
 
 </div>
@@ -220,9 +210,7 @@ class="screen">
 <div class="printer">
 
 <div class="printerTop">
-
 DIGITAL PHOTOBOOTH
-
 </div>
 
 <div class="paperArea">
@@ -235,9 +223,7 @@ id="printPreview">
 </div>
 
 <p id="printingStatus">
-
 Printing...
-
 </p>
 
 </section>
@@ -257,23 +243,17 @@ id="resultImage">
 
 <button
 id="downloadBtn">
-
 Download
-
 </button>
 
 <button
 id="retakeBtn">
-
 Retake
-
 </button>
 
 <button
 id="newSession">
-
 New Session
-
 </button>
 
 </div>
@@ -293,8 +273,7 @@ type="audio/mpeg">
 </audio>
 
 <script
-src="photobooth.js?v=2.0.0">
-
+src="photobooth.js?v=2.0.1">
 </script>
 
 </body>
