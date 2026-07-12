@@ -1,0 +1,9 @@
+{
+  "name": "Digital Photobooth",
+  "short_name": "Photobooth",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d0b14",
+  "theme_color": "#0d0b14",
+  "description": "Capture four moments. One strip of memory."
+}

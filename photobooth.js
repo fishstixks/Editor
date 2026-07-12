@@ -1,7 +1,21 @@
 /* ============================================================
    DIGITAL PHOTOBOOTH
-   photobooth.js — Version 2.0.6 Alpha
-   Full build (Parts 1-4 combined)
+   photobooth.js — Version 2.1.0
+   Full build
+
+   Changelog vs 2.0.6:
+   - startCamera() now waits for the video element to actually report
+     real dimensions (loadedmetadata + a short exposure/white-balance
+     settle delay) before the countdown is allowed to start. Root
+     cause of the very dark, green-tinted captures: the countdown
+     (and first flash/capture) could fire while getUserMedia's stream
+     had only just attached, before the sensor's auto-exposure/AWB
+     had converged — especially in low light, which reads as a dark,
+     noisy, green/IR-looking frame.
+   - buildKioskPickers()/init() now also force `display:none` inline
+     on the 4 proxy <select> elements as a third, independent layer
+     of "never show these" alongside the CSS class and hidden attr,
+     so a stale cached stylesheet can never leave them visible.
    ============================================================ */
 
 (function () {
@@ -33,7 +47,8 @@
     } catch (e) {}
   }
 
-  log("photobooth.js v2.0.4 Alpha loading...");
+  const APP_VERSION = "2.1.0";
+  log(`photobooth.js v${APP_VERSION} loading...`);
 
   /* ------------------------------------------------------------
      1. REQUIRED DOM ELEMENTS
@@ -94,6 +109,7 @@
     isStarting: false,
     isSessionActive: false,
     isCapturing: false,
+    isCameraReady: false,    // true once exposure/white-balance has settled
     photos: [],              // raw captured frames (data URLs, unfiltered)
     currentFilter: "normal",
     currentLayout: "strip",
@@ -223,7 +239,43 @@
       state.stream = null;
     }
     if (el.camera) el.camera.srcObject = null;
+    state.isCameraReady = false;
   }
+
+  // Resolves once the <video> element has real pixel dimensions AND
+  // has painted at least one frame. Resolves with true/false so
+  // callers can decide whether to proceed. Times out defensively
+  // after 4s so a broken stream can't hang the app forever.
+  function waitForVideoReady(video, timeoutMs = 4000) {
+    return new Promise((resolve) => {
+      if (video.readyState >= 2 && video.videoWidth > 0) {
+        resolve(true);
+        return;
+      }
+      let settled = false;
+      const done = (ok) => {
+        if (settled) return;
+        settled = true;
+        video.removeEventListener("loadeddata", onReady);
+        window.clearTimeout(timer);
+        resolve(ok);
+      };
+      const onReady = () => {
+        if (video.videoWidth > 0) done(true);
+      };
+      video.addEventListener("loadeddata", onReady);
+      const timer = window.setTimeout(() => done(video.videoWidth > 0), timeoutMs);
+    });
+  }
+
+  // Real cameras (especially front-facing ones in low light) need a
+  // short window after the stream attaches for auto-exposure and
+  // auto-white-balance to converge. Skipping this is the reason a
+  // capture taken the instant getUserMedia resolves can come out
+  // dark, noisy, and green/off-colour. This is a fixed settle delay
+  // rather than a pixel-brightness probe, since it needs no extra
+  // canvas reads and works consistently across devices.
+  const EXPOSURE_SETTLE_MS = 900;
 
   async function startCamera(facingMode) {
     if (!isGetUserMediaSupported()) {
@@ -236,6 +288,8 @@
     }
 
     stopCurrentStream();
+    state.isCameraReady = false;
+    if (el.camera) el.camera.classList.add("camera-warming-up");
 
     const constraints = {
       audio: false,
@@ -265,9 +319,22 @@
         warn("video.play() rejected:", playErr);
       }
 
-      log("Camera started successfully.");
+      const gotFrame = await waitForVideoReady(el.camera);
+      if (!gotFrame) {
+        warn("Video never reported real dimensions — proceeding anyway, but captures may be blank.");
+      }
+
+      // Let exposure/white-balance settle before anything is allowed
+      // to capture from this stream.
+      await new Promise((resolve) => trackedTimeout(resolve, EXPOSURE_SETTLE_MS));
+
+      state.isCameraReady = true;
+      if (el.camera) el.camera.classList.remove("camera-warming-up");
+
+      log("Camera started and ready (exposure settled).");
       return true;
     } catch (err) {
+      if (el.camera) el.camera.classList.remove("camera-warming-up");
       handleCameraError(err);
       return false;
     }
@@ -372,7 +439,10 @@
   function resetProgress() {
     if (el.progressFill) el.progressFill.style.width = "0%";
     if (el.photoCounter) el.photoCounter.textContent = "0 / 4";
-    if (el.countdown) el.countdown.textContent = "";
+    if (el.countdown) {
+      el.countdown.textContent = "";
+      el.countdown.removeAttribute("data-warming");
+    }
   }
 
   function updateProgress(count) {
@@ -419,12 +489,30 @@
     });
   }
 
+  // Shown briefly before the very first countdown if the camera
+  // stream needs a moment longer to settle than expected.
+  function showWarmingMessage() {
+    if (!el.countdown) return;
+    el.countdown.textContent = "Getting ready…";
+    el.countdown.setAttribute("data-warming", "true");
+  }
+
+  function clearWarmingMessage() {
+    if (!el.countdown) return;
+    el.countdown.textContent = "";
+    el.countdown.removeAttribute("data-warming");
+  }
+
   function captureFrame() {
     if (!el.camera) return null;
     const video = el.camera;
+    if (!video.videoWidth || !video.videoHeight) {
+      warn("captureFrame called with a video that has no dimensions yet.");
+      return null;
+    }
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
 
     // Match the mirrored preview when using the front camera so the
@@ -447,6 +535,20 @@
     resetProgress();
 
     try {
+      // Belt-and-suspenders: startCamera() already waits for the
+      // exposure settle delay, but if for any reason the camera still
+      // isn't marked ready (e.g. a very slow device), wait here too
+      // rather than shooting a guaranteed-bad first frame.
+      if (!state.isCameraReady) {
+        showWarmingMessage();
+        let waited = 0;
+        while (!state.isCameraReady && state.isSessionActive && waited < 4000) {
+          await new Promise((resolve) => trackedTimeout(resolve, 150));
+          waited += 150;
+        }
+        clearWarmingMessage();
+      }
+
       for (let i = 1; i <= 4; i++) {
         if (!state.isSessionActive) break; // cancelled mid-sequence
         await runCountdown(3);
@@ -468,73 +570,61 @@
       }
 
       if (state.isSessionActive && state.photos.length === 4) {
-        await new Promise((resolve) => trackedTimeout(resolve, 2000)); // wait 2s after 4th photo
         showPreview();
+      } else if (state.isSessionActive) {
+        showUserError("Couldn't capture all 4 photos. Please try again.");
+        showScreen("welcomeScreen");
       }
-    } catch (err) {
-      error("Error during capture sequence:", err);
-      showUserError("Something went wrong during capture. Please try again.");
-      showScreen("welcomeScreen");
     } finally {
       state.isCapturing = false;
     }
   }
 
   /* ------------------------------------------------------------
-     7. PREVIEW -> PROCESSING -> PRINTING -> RESULT
+     7. PREVIEW -> PROCESSING -> COMPOSITE -> PRINTING -> RESULT
   ------------------------------------------------------------ */
   function showPreview() {
-    const previewEls = [el.preview1, el.preview2, el.preview3, el.preview4];
-    previewEls.forEach((imgEl, idx) => {
-      if (!imgEl) return;
-      imgEl.style.filter = FILTERS[state.currentFilter] || "none";
-      imgEl.src = state.photos[idx] || "";
-      imgEl.style.animationDelay = `${idx * 90}ms`;
+    stopCurrentStream();
+    state.isSessionActive = false;
+
+    const previewIds = ["preview1", "preview2", "preview3", "preview4"];
+    previewIds.forEach((id, idx) => {
+      const img = el[id];
+      if (!img) return;
+      img.style.animation = "none";
+      void img.offsetWidth;
+      img.style.animation = "";
+      img.src = state.photos[idx] || "";
     });
 
-    stopCurrentStream(); // done shooting, release camera to avoid memory/battery drain
     showScreen("previewScreen");
-
     trackedTimeout(() => {
       showScreen("processingScreen");
-      trackedTimeout(() => {
-        buildFinalImage();
-      }, 1400);
-    }, 1200);
+      trackedTimeout(buildFinalImage, 1200);
+    }, 1400);
   }
 
-  /**
-   * Composites the 4 captured photos onto the hidden export canvas,
-   * applying the selected filter, layout (strip or grid), and a
-   * watermark. Produces state.finalImageDataUrl.
-   */
   function buildFinalImage() {
-    if (!el.exportCanvas) {
-      showUserError("Export canvas not found. Cannot build final image.");
-      return;
-    }
-    if (state.photos.length < 4) {
-      showUserError("Not enough photos captured to build the final image.");
-      showScreen("welcomeScreen");
-      return;
-    }
-
     const canvas = el.exportCanvas;
+    if (!canvas) {
+      showUserError("Could not build the final image (export canvas missing).");
+      return;
+    }
     const ctx = canvas.getContext("2d");
-    const filterCss = FILTERS[state.currentFilter] || "none";
     const colours = FRAME_COLOURS[state.currentFrameColour] || FRAME_COLOURS.cream;
     const template = TEMPLATES[state.currentTemplate] || TEMPLATES.classic;
+    const filterCss = FILTERS[state.currentFilter] || FILTERS.normal;
 
-    const frameW = 900; // export resolution per photo cell (high-res)
-    const frameH = 675;
-    const gap = 24;
-    const border = 40;
+    const border = 28;
+    const gap = 14;
+    const frameW = 480;
+    const frameH = 360;
 
     let totalW, totalH, positions;
 
     if (state.currentLayout === "grid") {
-      totalW = frameW * 2 + gap + border * 2;
-      totalH = frameH * 2 + gap + border * 2;
+      totalW = border * 2 + frameW * 2 + gap;
+      totalH = border * 2 + frameH * 2 + gap + 70; // extra bottom space for watermark
       positions = [
         { x: border, y: border },
         { x: border + frameW + gap, y: border },
@@ -542,9 +632,8 @@
         { x: border + frameW + gap, y: border + frameH + gap },
       ];
     } else {
-      // strip: 4 stacked vertically
-      totalW = frameW + border * 2;
-      totalH = (frameH + gap) * 4 - gap + border * 2 + 90; // extra bottom space for label
+      totalW = border * 2 + frameW;
+      totalH = border * 2 + frameH * 4 + gap * 3 + 70;
       positions = [0, 1, 2, 3].map((i) => ({
         x: border,
         y: border + i * (frameH + gap),
@@ -872,6 +961,18 @@
     selectEl.value = value;
   }
 
+  // Forces the 4 proxy selects to stay invisible regardless of CSS
+  // state. Called at init, independent of whatever style.css does.
+  function hardHideProxySelects() {
+    [el.theme, el.layout, el.filter, el.template].forEach((node) => {
+      if (!node) return;
+      node.hidden = true;
+      node.style.display = "none";
+      node.setAttribute("aria-hidden", "true");
+      node.setAttribute("tabindex", "-1");
+    });
+  }
+
   function buildSwatchGroup(container, options, initialId, onPick, renderTile) {
     if (!container) return;
     container.innerHTML = "";
@@ -899,6 +1000,8 @@
   }
 
   function buildKioskPickers() {
+    hardHideProxySelects();
+
     buildSwatchGroup(el.colourSwatches, FRAME_COLOUR_SWATCHES, state.currentFrameColour, (id) => {
       applyFrameColour(id);
       setSelectValue(el.theme, id);
@@ -1004,7 +1107,7 @@
     if (el.template && el.template.value) state.currentTemplate = el.template.value;
 
     showScreen("welcomeScreen");
-    log("Photobooth init complete.");
+    log(`Photobooth init complete. Version ${APP_VERSION}.`);
   }
 
   if (document.readyState === "loading") {
@@ -1017,5 +1120,6 @@
   Object.assign(window.Photobooth, {
     el, state, log, warn, error,
     showUserError, showScreen, startCamera, stopCurrentStream, validateDOM,
+    APP_VERSION,
   });
 })();

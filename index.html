@@ -10,8 +10,21 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Digital Photobooth">
 <meta name="theme-color" content="#0d0b14">
+<link rel="manifest" href="manifest.json">
 
-<link rel="stylesheet" href="style.css">
+<!-- Tell browsers/GitHub Pages not to keep a stale copy of the page
+     itself around — the big offender in "I pushed a fix and nothing
+     changed" reports is usually the HTML being served from a cache,
+     which then keeps requesting the OLD (also cached) css/js files
+     because it doesn't know a new version exists. -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
+<!-- APP_VERSION query string below is a manual cache-buster: bump it
+     on every deploy so the browser is forced to fetch the new file
+     instead of reusing a cached style.css/photobooth.js. See README. -->
+<link rel="stylesheet" href="style.css?v=2.1.0">
 </head>
 <body>
 
@@ -30,7 +43,10 @@
 
     <!-- Kiosk-style picker: real selects are kept (hidden) so the
          rest of the app / IDs stay unchanged, but the user picks
-         visually via swatches, like a real photobooth touchscreen. -->
+         visually via swatches, like a real photobooth touchscreen.
+         The selects are hidden three different ways (class, hidden
+         attribute, and inline style) so that even a stale/partial
+         CSS load can't leave them visibly exposed — see README. -->
     <div class="kiosk-picker">
 
       <div class="picker-group">
@@ -54,8 +70,10 @@
       </div>
     </div>
 
-    <!-- Hidden but functional: kept so existing IDs / JS reads still work -->
-    <select id="theme" class="visually-hidden" aria-hidden="true" tabindex="-1">
+    <!-- Hidden but functional: kept so existing IDs / JS reads still work.
+         style="display:none" is a belt-and-suspenders hide in case
+         style.css hasn't loaded/updated yet in the browser. -->
+    <select id="theme" class="visually-hidden" aria-hidden="true" tabindex="-1" hidden style="display:none">
       <option value="cream">Cream</option>
       <option value="blush">Blush</option>
       <option value="noir">Noir</option>
@@ -63,18 +81,18 @@
       <option value="mint">Mint</option>
       <option value="sky">Sky</option>
     </select>
-    <select id="layout" class="visually-hidden" aria-hidden="true" tabindex="-1">
+    <select id="layout" class="visually-hidden" aria-hidden="true" tabindex="-1" hidden style="display:none">
       <option value="strip">Strip (4x1)</option>
       <option value="grid">Grid (2x2)</option>
     </select>
-    <select id="filter" class="visually-hidden" aria-hidden="true" tabindex="-1">
+    <select id="filter" class="visually-hidden" aria-hidden="true" tabindex="-1" hidden style="display:none">
       <option value="normal">Normal</option>
       <option value="bw">Black &amp; White</option>
       <option value="warm">Warm</option>
       <option value="cool">Cool</option>
       <option value="vintage">Vintage</option>
     </select>
-    <select id="template" class="visually-hidden" aria-hidden="true" tabindex="-1">
+    <select id="template" class="visually-hidden" aria-hidden="true" tabindex="-1" hidden style="display:none">
       <option value="classic">Classic</option>
       <option value="blossom">Blossom</option>
       <option value="stars">Stars</option>
@@ -165,6 +183,6 @@
 </audio>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="photobooth.js"></script>
+<script src="photobooth.js?v=2.1.0"></script>
 </body>
 </html>

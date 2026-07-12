@@ -1,12 +1,17 @@
 /* ============================================================
    DIGITAL PHOTOBOOTH
-   style.css — Version 2.0.6 Alpha
+   style.css — Version 2.1.0
 
    Design language: quiet Korean studio-photobooth aesthetic —
    ink black canvas, warm brushed-gold rule, blossom-pink accent,
    soft paper-white cards. One signature move: the countdown ring
    and the printed-strip edge both use the same dashed "perforation"
    motif, tying capture to output.
+
+   Changelog vs 2.0.6:
+   - .visually-hidden hardened (see note above the rule) so the
+     4 proxy <select> elements can never render as visible native
+     dropdowns, even if a stale/partial copy of this file is served.
    ============================================================ */
 
 :root {
@@ -143,7 +148,16 @@ select {
   margin: 0 0 32px;
 }
 
+/* Screen-reader-only utility. Hardened beyond the classic clip-rect
+   pattern: this project proxies 4 native <select> elements purely as
+   JS-readable state (see photobooth.js buildKioskPickers), and they
+   must NEVER be visibly interactive. display:none is added on top of
+   the clip technique — belt-and-suspenders, and immune to any single
+   point of failure (stale cache, one rule getting overridden, etc).
+   The HTML also sets the `hidden` attribute and an inline style for
+   the same reason. Three independent layers, one outcome. */
 .visually-hidden {
+  display: none !important;
   position: absolute !important;
   width: 1px; height: 1px;
   padding: 0; margin: -1px;
@@ -179,6 +193,7 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  min-height: 34px; /* keeps layout stable while swatches render in */
 }
 
 /* Frame-colour swatches: real coloured circles */
@@ -317,6 +332,14 @@ select {
   transform: scaleX(-1); /* mirror front camera like a mirror-booth */
 }
 
+/* Dims the live preview while the camera is still finding exposure/
+   white balance right after getUserMedia resolves, so the user isn't
+   staring at (and the countdown doesn't start over) a dark/noisy
+   frame. Removed by photobooth.js once the stream is confirmed ready. */
+#camera.camera-warming-up {
+  filter: brightness(0.9) saturate(0.9);
+}
+
 .hud-top {
   position: absolute;
   top: 16px;
@@ -354,6 +377,13 @@ select {
 
 .countdown:empty {
   display: none;
+}
+
+.countdown[data-warming="true"] {
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
 }
 
 .progress-track {
