@@ -1,6 +1,6 @@
 /* ============================================================
    DIGITAL PHOTOBOOTH
-   style.css — Version 2.2.0
+   style.css — Version 2.3.0
 
    Design language: quiet Korean studio-photobooth aesthetic —
    ink black canvas, warm brushed-gold rule, blossom-pink accent,
@@ -8,10 +8,18 @@
    and the printed-strip edge both use the same dashed "perforation"
    motif, tying capture to output.
 
-   Changelog vs 2.0.6:
-   - .visually-hidden hardened (see note above the rule) so the
-     4 proxy <select> elements can never render as visible native
-     dropdowns, even if a stale/partial copy of this file is served.
+   Changelog vs 2.2.0:
+   - Removed the QR-code feature entirely (.qr-container rules gone
+     — the underlying qrcodejs library couldn't reliably encode a
+     photo-sized payload, so it always failed; not worth patching).
+   - Added per-photo retake affordance on the preview screen
+     (.preview-item / .retake-one-btn) and a persistent Continue
+     button (.preview-actions), replacing the old auto-advance timer
+     so there's actually time to tap retake before moving on.
+   - Added .edit-panel on the result screen: lets you restyle an
+     already-captured strip (colour/template/layout/filter) without
+     retaking, reusing the same .swatch-row/.tile-swatch/.colour-swatch
+     components from the welcome screen.
    ============================================================ */
 
 :root {
@@ -450,11 +458,16 @@ select {
   margin-bottom: 20px;
 }
 
+.preview-item {
+  position: relative;
+}
+
 .preview-photo {
   width: 100%;
   aspect-ratio: 1 / 1;
   object-fit: cover;
   border-radius: var(--radius-sm);
+  display: block;
   background: var(--ink-soft);
   border: 1px solid var(--line);
   opacity: 0;
@@ -469,9 +482,44 @@ select {
   }
 }
 
+/* Small circular "retake just this one" button, top-right of each
+   preview cell — same icon-btn language as the camera-screen switch
+   button, so it reads as a familiar control rather than a new idiom. */
+.retake-one-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(13, 11, 20, 0.65);
+  color: var(--paper);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: transform var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.retake-one-btn:active {
+  transform: rotate(-45deg) scale(0.9);
+}
+
+@media (hover: hover) {
+  .retake-one-btn:hover {
+    border-color: var(--gold);
+  }
+}
+
 .preview-caption {
   color: var(--text-dim);
   font-size: 14px;
+  text-align: center;
+}
+
+.preview-actions {
+  margin-top: 18px;
 }
 
 /* ---------- Processing screen ---------- */
@@ -622,6 +670,22 @@ select {
   color: var(--text-dim);
 }
 
+/* Restyle-without-retaking panel, tucked behind "Edit strip" so the
+   default result screen stays uncluttered. Reuses the exact same
+   .swatch-row/.tile-swatch/.colour-swatch components as the welcome
+   screen for visual consistency. */
+.edit-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+  background: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
 .result-actions {
   display: flex;
   flex-wrap: wrap;
@@ -635,21 +699,6 @@ select {
   font-size: 13px;
 }
 
-.qr-container {
-  background: #fff;
-  padding: 16px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.qr-container canvas,
-.qr-container img {
-  display: block;
-  width: 180px;
-  height: 180px;
-}
 #cameraError {
   position: fixed;
   top: max(16px, var(--safe-top));

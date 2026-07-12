@@ -24,7 +24,7 @@
 <!-- APP_VERSION query string below is a manual cache-buster: bump it
      on every deploy so the browser is forced to fetch the new file
      instead of reusing a cached style.css/photobooth.js. See README. -->
-<link rel="stylesheet" href="style.css?v=2.2.0">
+<link rel="stylesheet" href="style.css?v=2.3.0">
 </head>
 <body>
 
@@ -127,12 +127,27 @@
 <!-- ============ PREVIEW SCREEN ============ -->
 <section id="previewScreen" class="screen" hidden>
   <div class="preview-grid">
-    <img id="preview1" class="preview-photo" alt="Photo 1">
-    <img id="preview2" class="preview-photo" alt="Photo 2">
-    <img id="preview3" class="preview-photo" alt="Photo 3">
-    <img id="preview4" class="preview-photo" alt="Photo 4">
+    <div class="preview-item">
+      <img id="preview1" class="preview-photo" alt="Photo 1">
+      <button class="retake-one-btn" type="button" data-photo-index="0" aria-label="Retake photo 1">↻</button>
+    </div>
+    <div class="preview-item">
+      <img id="preview2" class="preview-photo" alt="Photo 2">
+      <button class="retake-one-btn" type="button" data-photo-index="1" aria-label="Retake photo 2">↻</button>
+    </div>
+    <div class="preview-item">
+      <img id="preview3" class="preview-photo" alt="Photo 3">
+      <button class="retake-one-btn" type="button" data-photo-index="2" aria-label="Retake photo 3">↻</button>
+    </div>
+    <div class="preview-item">
+      <img id="preview4" class="preview-photo" alt="Photo 4">
+      <button class="retake-one-btn" type="button" data-photo-index="3" aria-label="Retake photo 4">↻</button>
+    </div>
   </div>
-  <p class="preview-caption">Nice shots! Processing your strip...</p>
+  <p id="previewCaption" class="preview-caption">Nice shots! Tap ↻ on any photo to retake just that one.</p>
+  <div class="preview-actions">
+    <button id="continueBtn" class="btn btn-primary" type="button">Continue</button>
+  </div>
 </section>
 
 <!-- ============ PROCESSING SCREEN ============ -->
@@ -160,12 +175,35 @@
   <div class="result-inner">
     <div class="result-frame">
       <img id="resultImage" class="result-image" alt="Your photobooth strip">
-      <div id="qrContainer" class="qr-container" hidden></div>
     </div>
     <p id="resultCaption" class="result-stamp">Digital Photobooth · Fresh Print</p>
-    <button id="qrToggleBtn" class="btn btn-secondary btn-small" type="button">
-      View as QR code
+
+    <button id="editToggleBtn" class="btn btn-secondary btn-small" type="button" aria-expanded="false">
+      Edit strip
     </button>
+
+    <!-- Re-style the already-captured photos without retaking them.
+         buildFinalImage() only ever reads from state.photos, so any
+         of these can change post-capture with no camera involved. -->
+    <div id="editPanel" class="edit-panel" hidden>
+      <div class="picker-group">
+        <span class="picker-label">Frame Colour</span>
+        <div id="resultColourSwatches" class="swatch-row" role="radiogroup" aria-label="Frame colour"></div>
+      </div>
+      <div class="picker-group">
+        <span class="picker-label">Template</span>
+        <div id="resultTemplateSwatches" class="swatch-row swatch-row-template" role="radiogroup" aria-label="Template"></div>
+      </div>
+      <div class="picker-group">
+        <span class="picker-label">Layout</span>
+        <div id="resultLayoutSwatches" class="swatch-row" role="radiogroup" aria-label="Layout"></div>
+      </div>
+      <div class="picker-group">
+        <span class="picker-label">Filter</span>
+        <div id="resultFilterSwatches" class="swatch-row" role="radiogroup" aria-label="Filter"></div>
+      </div>
+    </div>
+
     <div class="result-actions">
       <button id="downloadBtn" class="btn btn-primary" type="button">Download</button>
       <button id="retakeBtn" class="btn btn-secondary" type="button">Retake</button>
@@ -182,7 +220,6 @@
   <source src="data:audio/mpeg;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA////////////////////////////////////8AAAA5TEFNRTMuMTAwBLkAAAAAAAAAABQgJAUHQQAB4AAAASBypqZ5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==" type="audio/mpeg">
 </audio>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="photobooth.js?v=2.2.0"></script>
+<script src="photobooth.js?v=2.3.0"></script>
 </body>
 </html>

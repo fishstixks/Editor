@@ -1,7 +1,28 @@
 /* ============================================================
    DIGITAL PHOTOBOOTH
-   photobooth.js — Version 2.2.0
+   photobooth.js — Version 2.3.0
    Full build
+
+   Changelog vs 2.2.0:
+   - Removed the QR-code result view. The qrcodejs library on cdnjs
+     can't reliably encode a payload as large as a shrunk photo (it
+     was throwing internally well before the shrink-loop's own
+     "small enough" threshold), so "Couldn't generate a QR code"
+     fired on effectively every attempt. Rather than patch a feature
+     built on embedding a whole image inside a QR code (which,
+     even working, scans poorly and needs no server), it's gone —
+     Download remains the way to get the photo off the device.
+   - Preview screen no longer auto-advances to processing after a
+     fixed delay. Each of the 4 shots now has its own ↻ retake
+     button (captureOnePhoto/handleRetakeSinglePhoto — a single
+     3-2-1-countdown-and-shoot reusing the same building blocks as
+     the main sequence), and a persistent Continue button
+     (handleContinueFromPreview) moves things forward explicitly.
+   - Result screen gained an "Edit strip" panel (buildResultEditPickers/
+     regenerateFinalImage) that lets frame colour, template, layout,
+     and filter all be changed *after* capture with no camera
+     involved — buildFinalImage() only ever reads from state.photos,
+     so it can just recomposite the same 4 shots on demand.
 
    Changelog vs 2.1.0:
    - Photos no longer look squished. The composite used to force
@@ -64,7 +85,7 @@
     } catch (e) {}
   }
 
-  const APP_VERSION = "2.2.0";
+  const APP_VERSION = "2.3.0";
   log(`photobooth.js v${APP_VERSION} loading...`);
 
   /* ------------------------------------------------------------
@@ -78,9 +99,12 @@
     "theme", "layout", "filter", "template",
     "colourSwatches", "templateSwatches", "layoutSwatches", "filterSwatches",
     "preview1", "preview2", "preview3", "preview4",
+    "previewCaption", "continueBtn",
     "exportCanvas",
     "printPreview", "printingStatus",
-    "resultImage", "qrToggleBtn", "qrContainer",
+    "resultImage",
+    "editToggleBtn", "editPanel",
+    "resultColourSwatches", "resultTemplateSwatches", "resultLayoutSwatches", "resultFilterSwatches",
   ];
 
   const el = {};
@@ -133,7 +157,7 @@
     currentFrameColour: "cream",
     currentTemplate: "classic",
     finalImageDataUrl: null,
-    showingQr: false,
+    retakingIndex: null,      // set while a single-photo retake is in progress
     captureTimers: [],        // all pending timeouts, for cleanup
   };
 
@@ -621,6 +645,15 @@
     stopCurrentStream();
     state.isSessionActive = false;
     resetProgress();
+
+    if (state.retakingIndex !== null) {
+      // Cancelling a single-photo retake should just drop back to the
+      // preview screen with the original 4 photos intact, not wipe
+      // the whole session.
+      state.retakingIndex = null;
+      showPreview();
+      return;
+    }
     showScreen("welcomeScreen");
   }
 
@@ -793,14 +826,74 @@
       img.src = state.photos[idx] || "";
     });
 
+    if (el.previewCaption) {
+      el.previewCaption.textContent = "Nice shots! Tap ↻ on any photo to retake just that one.";
+    }
+
     showScreen("previewScreen");
-    trackedTimeout(() => {
-      showScreen("processingScreen");
-      trackedTimeout(buildFinalImage, 1200);
-    }, 1400);
+    // No auto-advance here on purpose: retaking a single photo needs
+    // the preview screen to just sit still until the person taps
+    // Continue (or one of the ↻ buttons).
   }
 
-  function buildFinalImage() {
+  // Runs one 3-2-1 countdown + flash + shutter + capture and resolves
+  // with the resulting data URL (or null on failure). Shares all the
+  // same building blocks as the main 4-shot sequence so a retaken
+  // photo looks identical to the others.
+  async function captureOnePhoto() {
+    await runCountdown(3);
+    if (!state.isSessionActive) return null;
+    triggerFlash();
+    playShutterSound();
+    return captureFrame();
+  }
+
+  async function handleRetakeSinglePhoto(idx) {
+    if (state.retakingIndex !== null) return; // already retaking one
+    log(`Retaking photo ${idx + 1} only.`);
+    state.retakingIndex = idx;
+
+    const started = await startCamera(state.facingMode);
+    if (!started) {
+      state.retakingIndex = null;
+      showScreen("previewScreen");
+      return;
+    }
+
+    state.isSessionActive = true;
+    if (el.photoCounter) el.photoCounter.textContent = `Retake photo ${idx + 1}`;
+    if (el.progressFill) el.progressFill.style.width = "0%";
+    showScreen("cameraScreen");
+
+    const frame = await captureOnePhoto();
+    state.isSessionActive = false;
+    stopCurrentStream();
+    state.retakingIndex = null;
+
+    if (frame) {
+      state.photos[idx] = frame;
+      log(`Photo ${idx + 1} retaken.`);
+    } else {
+      warn(`Retake of photo ${idx + 1} failed; keeping original.`);
+    }
+    showPreview();
+  }
+
+  function handleContinueFromPreview(evt) {
+    if (evt && evt.preventDefault) evt.preventDefault();
+    if (state.photos.length !== 4) {
+      showUserError("Still missing a photo — please retake it first.");
+      return;
+    }
+    showScreen("processingScreen");
+    trackedTimeout(buildFinalImage, 1200);
+  }
+
+  // onComplete, if given, is called instead of goToPrinting() once the
+  // composite is ready — used by the result-screen edit panel to
+  // instantly refresh the strip in place without replaying the whole
+  // printing animation.
+  function buildFinalImage(onComplete) {
     const canvas = el.exportCanvas;
     if (!canvas) {
       showUserError("Could not build the final image (export canvas missing).");
@@ -894,7 +987,11 @@
       drawWatermark();
       state.finalImageDataUrl = canvas.toDataURL("image/png");
       log("Final composite image built.");
-      goToPrinting();
+      if (typeof onComplete === "function") {
+        onComplete();
+      } else {
+        goToPrinting();
+      }
     }
 
     // Real vector artwork, not emoji: the perforation motif runs the
@@ -959,103 +1056,84 @@
     if (el.resultImage && state.finalImageDataUrl) {
       el.resultImage.src = state.finalImageDataUrl;
     }
-    state.showingQr = false;
-    if (el.qrContainer) { el.qrContainer.hidden = true; el.qrContainer.innerHTML = ""; }
-    if (el.resultImage) el.resultImage.hidden = false;
-    if (el.qrToggleBtn) el.qrToggleBtn.textContent = "View as QR code";
     if (el.resultCaption) el.resultCaption.textContent = "Digital Photobooth · Fresh Print";
+    if (el.editPanel) el.editPanel.hidden = true;
+    if (el.editToggleBtn) {
+      el.editToggleBtn.textContent = "Edit strip";
+      el.editToggleBtn.setAttribute("aria-expanded", "false");
+    }
+    buildResultEditPickers();
     showScreen("resultScreen");
   }
 
-  /**
-   * Builds a small, heavily compressed thumbnail small enough to fit
-   * inside a QR code's data capacity (QR codes can hold a few KB at
-   * most — nowhere near enough for the full-resolution strip). This
-   * is a genuine technical ceiling: without a server to host the
-   * image and put a real link in the QR code, the code can only
-   * carry the image itself, so it's offered as a quick low-res
-   * "preview elsewhere" option, not a replacement for Download.
-   */
-  function buildQrThumbnail(sourceDataUrl) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        let width = 260;
-        let quality = 0.5;
-        const attempt = () => {
-          const canvas = document.createElement("canvas");
-          const scale = width / img.width;
-          canvas.width = width;
-          canvas.height = Math.round(img.height * scale);
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const out = canvas.toDataURL("image/jpeg", quality);
-
-          if (out.length < 2200 || (width <= 90 && quality <= 0.25)) {
-            resolve(out);
-            return;
-          }
-          // Still too big for a QR code — shrink further and retry.
-          if (quality > 0.25) {
-            quality -= 0.1;
-          } else {
-            width = Math.max(90, width - 40);
-          }
-          attempt();
-        };
-        attempt();
-      };
-      img.onerror = () => reject(new Error("Could not load image for QR thumbnail."));
-      img.src = sourceDataUrl;
+  // Re-styling controls on the result screen. These never touch the
+  // camera — buildFinalImage() only reads from state.photos, so any
+  // of colour/template/layout/filter can change after capture and
+  // just re-composite the same 4 photos.
+  function regenerateFinalImage() {
+    buildFinalImage(() => {
+      if (el.resultImage) el.resultImage.src = state.finalImageDataUrl;
     });
   }
 
-  async function handleToggleQr(evt) {
+  function buildResultEditPickers() {
+    buildSwatchGroup(el.resultColourSwatches, FRAME_COLOUR_SWATCHES, state.currentFrameColour, (id) => {
+      applyFrameColour(id);
+      setSelectValue(el.theme, id);
+      regenerateFinalImage();
+    });
+
+    buildSwatchGroup(
+      el.resultTemplateSwatches,
+      Object.keys(TEMPLATES).map((id) => ({ id, ...TEMPLATES[id] })),
+      state.currentTemplate,
+      (id) => {
+        state.currentTemplate = id;
+        setSelectValue(el.template, id);
+        regenerateFinalImage();
+      },
+      (btn, opt) => {
+        btn.innerHTML = `<span class="tile-icon">${opt.icon}</span><span class="tile-label">${opt.label}</span>`;
+      }
+    );
+
+    buildSwatchGroup(
+      el.resultLayoutSwatches,
+      LAYOUT_OPTIONS,
+      state.currentLayout,
+      (id) => {
+        state.currentLayout = id;
+        setSelectValue(el.layout, id);
+        regenerateFinalImage();
+      },
+      (btn, opt) => {
+        btn.innerHTML = `<span class="tile-icon">${opt.icon}</span><span class="tile-label">${opt.label}</span>`;
+      }
+    );
+
+    buildSwatchGroup(
+      el.resultFilterSwatches,
+      FILTER_OPTIONS,
+      state.currentFilter,
+      (id) => {
+        state.currentFilter = id;
+        setSelectValue(el.filter, id);
+        regenerateFinalImage();
+      },
+      (btn, opt) => {
+        btn.innerHTML = `<span class="tile-icon">${opt.icon}</span><span class="tile-label">${opt.label}</span>`;
+      }
+    );
+  }
+
+  function handleToggleEditPanel(evt) {
     if (evt && evt.preventDefault) evt.preventDefault();
-    if (!state.finalImageDataUrl) return;
-
-    if (state.showingQr) {
-      // switch back to the photo view
-      state.showingQr = false;
-      if (el.resultImage) el.resultImage.hidden = false;
-      if (el.qrContainer) el.qrContainer.hidden = true;
-      if (el.qrToggleBtn) el.qrToggleBtn.textContent = "View as QR code";
-      if (el.resultCaption) el.resultCaption.textContent = "Digital Photobooth · Fresh Print";
-      return;
-    }
-
-    if (!window.QRCode) {
-      showUserError("QR code library did not load. Check your connection and try again.");
-      return;
-    }
-
-    try {
-      if (el.qrToggleBtn) el.qrToggleBtn.disabled = true;
-      const thumbDataUrl = await buildQrThumbnail(state.finalImageDataUrl);
-
-      if (el.qrContainer) {
-        el.qrContainer.innerHTML = "";
-        // eslint-disable-next-line no-new
-        new window.QRCode(el.qrContainer, {
-          text: thumbDataUrl,
-          width: 180,
-          height: 180,
-          correctLevel: window.QRCode.CorrectLevel.L,
-        });
-        el.qrContainer.hidden = false;
-      }
-      if (el.resultImage) el.resultImage.hidden = true;
-      state.showingQr = true;
-      if (el.qrToggleBtn) el.qrToggleBtn.textContent = "View photo strip";
-      if (el.resultCaption) {
-        el.resultCaption.textContent = "Low-res scan preview — use Download for full quality";
-      }
-      log("QR thumbnail generated, length:", thumbDataUrl.length);
-    } catch (err) {
-      error("Failed to build QR code:", err);
-      showUserError("Couldn't generate a QR code for this photo.");
-    } finally {
-      if (el.qrToggleBtn) el.qrToggleBtn.disabled = false;
+    if (!el.editPanel) return;
+    const isHidden = el.editPanel.hidden;
+    el.editPanel.hidden = !isHidden;
+    if (el.editToggleBtn) {
+      el.editToggleBtn.textContent = isHidden ? "Hide edit" : "Edit strip";
+      el.editToggleBtn.setAttribute("aria-expanded", String(isHidden));
     }
   }
 
@@ -1275,7 +1353,19 @@
     safeAddListener(el.downloadBtn, "click", handleDownload, "downloadBtn:click");
     safeAddListener(el.retakeBtn, "click", handleRetake, "retakeBtn:click");
     safeAddListener(el.newSession, "click", handleNewSession, "newSession:click");
-    safeAddListener(el.qrToggleBtn, "click", handleToggleQr, "qrToggleBtn:click");
+    safeAddListener(el.continueBtn, "click", handleContinueFromPreview, "continueBtn:click");
+    safeAddListener(el.editToggleBtn, "click", handleToggleEditPanel, "editToggleBtn:click");
+
+    // Delegated: the 4 .retake-one-btn elements live inside
+    // .preview-grid and are static markup, so one listener on their
+    // common container covers all of them.
+    const previewGrid = document.querySelector(".preview-grid");
+    safeAddListener(previewGrid, "click", (evt) => {
+      const btn = evt.target.closest(".retake-one-btn");
+      if (!btn) return;
+      const idx = parseInt(btn.dataset.photoIndex, 10);
+      if (Number.isInteger(idx)) handleRetakeSinglePhoto(idx);
+    }, "previewGrid:retake-delegate");
   }
 
   function wireLifecycleCleanup() {
