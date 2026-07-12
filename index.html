@@ -24,7 +24,7 @@
 <!-- APP_VERSION query string below is a manual cache-buster: bump it
      on every deploy so the browser is forced to fetch the new file
      instead of reusing a cached style.css/photobooth.js. See README. -->
-<link rel="stylesheet" href="style.css?v=2.3.0">
+<link rel="stylesheet" href="style.css?v=2.4.0">
 </head>
 <body>
 
@@ -34,8 +34,38 @@
 <!-- Flash overlay (used across camera/capture) -->
 <div id="flash" class="flash" aria-hidden="true"></div>
 
+<!-- ============ LETTER INTRO SCREEN ============ -->
+<section id="letterScreen" class="screen screen-active">
+  <button id="letterSkipBtn" class="letter-skip-btn" type="button">Skip ›</button>
+
+  <div class="letter-stage">
+    <div id="envelope" class="envelope" hidden>
+      <span class="envelope-glyph" aria-hidden="true">💌</span>
+    </div>
+
+    <div id="letterCard" class="letter-card" hidden>
+      <p class="letter-greeting">To Lovedubs,</p>
+      <p class="letter-body">
+        Hi lovedubs, I made this app for you since you like photobooths.
+        I can add more features next time — just let me know.
+        <br><br>
+        I love you. Muah 💋
+      </p>
+      <p class="letter-signoff">Delivered with love by Apple 🐾</p>
+      <button id="letterCloseBtn" class="btn btn-secondary btn-small letter-close-btn" type="button">Close</button>
+    </div>
+
+    <div id="corgiWrap" class="corgi-wrap">
+      <span class="corgi-emoji" aria-hidden="true">🐕</span>
+    </div>
+  </div>
+
+  <p id="letterHint" class="letter-hint">Apple has a delivery for you…</p>
+</section>
+
 <!-- ============ WELCOME SCREEN ============ -->
-<section id="welcomeScreen" class="screen screen-active">
+<section id="welcomeScreen" class="screen" hidden>
+
   <div class="welcome-inner">
     <p class="eyebrow">디지털 포토부스</p>
     <h1 class="brand-title">DIGITAL<br>PHOTOBOOTH</h1>
@@ -220,6 +250,6 @@
   <source src="data:audio/mpeg;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA////////////////////////////////////8AAAA5TEFNRTMuMTAwBLkAAAAAAAAAABQgJAUHQQAB4AAAASBypqZ5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==" type="audio/mpeg">
 </audio>
 
-<script src="photobooth.js?v=2.3.0"></script>
+<script src="photobooth.js?v=2.4.0"></script>
 </body>
 </html>

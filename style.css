@@ -1,12 +1,20 @@
 /* ============================================================
    DIGITAL PHOTOBOOTH
-   style.css — Version 2.3.0
+   style.css — Version 2.4.0
 
    Design language: quiet Korean studio-photobooth aesthetic —
    ink black canvas, warm brushed-gold rule, blossom-pink accent,
    soft paper-white cards. One signature move: the countdown ring
    and the printed-strip edge both use the same dashed "perforation"
    motif, tying capture to output.
+
+   Changelog vs 2.3.0:
+   - New #letterScreen intro (.letter-stage, .corgi-wrap, .envelope,
+     .letter-card) — Apple the corgi runs in with a pop-up letter,
+     it springs open, and once closed Apple eats it and runs off
+     before the app hands off to the welcome screen. Pure CSS
+     keyframe animation; photobooth.js just sequences the classes
+     off 'animationend' (see LETTER INTRO in photobooth.js).
 
    Changelog vs 2.2.0:
    - Removed the QR-code feature entirely (.qr-container rules gone
@@ -713,6 +721,171 @@ select {
   max-width: 90vw;
   text-align: center;
   box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Letter intro screen ---------- */
+.letter-skip-btn {
+  position: absolute;
+  top: max(18px, var(--safe-top));
+  right: max(18px, var(--safe-right));
+  z-index: 5;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.letter-stage {
+  position: relative;
+  width: min(92vw, 420px);
+  height: 46vh;
+  min-height: 260px;
+  max-height: 380px;
+  overflow: hidden;
+}
+
+/* Apple the corgi. A plain emoji kept things simple and legible at
+   small sizes; the base rule flips it horizontally since the glyph
+   faces left by default on most platforms and Apple travels
+   left-to-right through the whole sequence (run in, then run out
+   further right), so it should always face the way it's moving. */
+.corgi-wrap {
+  position: absolute;
+  bottom: 8%;
+  left: 50%;
+  width: 60px;
+  margin-left: -30px;
+  font-size: 50px;
+  line-height: 1;
+  text-align: center;
+  transform: translateX(-220px);
+  will-change: transform;
+  z-index: 3;
+}
+
+.corgi-emoji {
+  display: inline-block;
+  transform: scaleX(-1);
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.35));
+}
+
+@keyframes corgiRunIn {
+  from { transform: translateX(-220px); }
+  to { transform: translateX(0); }
+}
+.corgi-wrap.corgi-run-in {
+  animation: corgiRunIn 900ms cubic-bezier(0.3, 0.9, 0.4, 1) forwards;
+}
+
+@keyframes corgiIdleBounce {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(0) translateY(-5px); }
+}
+.corgi-wrap.corgi-idle {
+  animation: corgiIdleBounce 1300ms ease-in-out infinite;
+}
+
+@keyframes corgiEatChomp {
+  0%, 100% { transform: translateX(0) scale(1, 1); }
+  25% { transform: translateX(0) scale(1.22, 0.82); }
+  55% { transform: translateX(0) scale(0.88, 1.14); }
+  80% { transform: translateX(0) scale(1.08, 0.94); }
+}
+.corgi-wrap.corgi-eat {
+  animation: corgiEatChomp 420ms ease-in-out;
+}
+
+@keyframes corgiRunOut {
+  from { transform: translateX(0); }
+  to { transform: translateX(260px); }
+}
+.corgi-wrap.corgi-run-out {
+  animation: corgiRunOut 900ms cubic-bezier(0.5, 0, 0.85, 0.4) forwards;
+}
+
+.envelope {
+  position: absolute;
+  bottom: 20%;
+  left: 50%;
+  font-size: 46px;
+  line-height: 1;
+  opacity: 0;
+  transform: translate(-50%, -40px) scale(0.8);
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.35));
+  z-index: 2;
+}
+
+@keyframes envelopeDrop {
+  0% { opacity: 0; transform: translate(-50%, -46px) scale(0.75); }
+  55% { opacity: 1; transform: translate(-50%, 8px) scale(1.08); }
+  75% { transform: translate(-50%, -4px) scale(0.97); }
+  100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+.envelope.envelope-drop {
+  animation: envelopeDrop 550ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.letter-card {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  width: min(86%, 300px);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--radius-md);
+  padding: 22px 20px 18px;
+  box-shadow: 0 24px 50px -14px rgba(0, 0, 0, 0.55);
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.2) rotate(-6deg);
+  z-index: 4;
+}
+
+@keyframes letterPopOpen {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2) rotate(-6deg); }
+  60% { opacity: 1; transform: translate(-50%, -50%) scale(1.07) rotate(2deg); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); }
+}
+.letter-card.letter-pop-open {
+  animation: letterPopOpen 480ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes letterPopClose {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.12) rotate(10deg); }
+}
+.letter-card.letter-pop-close {
+  animation: letterPopClose 360ms ease-in forwards;
+}
+
+.letter-greeting {
+  font-family: "Songmyung", "Noto Serif KR", Georgia, serif;
+  font-size: 17px;
+  margin: 0 0 10px;
+  color: var(--blossom-deep);
+}
+
+.letter-body {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 14px;
+  color: var(--ink);
+}
+
+.letter-signoff {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: rgba(13, 11, 20, 0.55);
+  margin: 0 0 16px;
+}
+
+.letter-hint {
+  color: var(--text-dim);
+  font-size: 13px;
+  min-height: 18px;
 }
 
 /* ---------- Touch & mobile refinements ---------- */

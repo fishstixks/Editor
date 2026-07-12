@@ -1,7 +1,18 @@
 /* ============================================================
    DIGITAL PHOTOBOOTH
-   photobooth.js — Version 2.3.0
+   photobooth.js — Version 2.4.0
    Full build
+
+   Changelog vs 2.3.0:
+   - New letter intro before the welcome screen: Apple the corgi
+     runs in with a pop-up letter, it springs open with a message,
+     closing it triggers Apple eating it and running off, then the
+     app hands off into the normal welcomeScreen flow. See "LETTER
+     INTRO" — playLetterIntro() sequences it off real 'animationend'
+     events (onAnimEnd()) against the keyframes in style.css, not
+     guessed timeouts, so it can't drift out of sync. A Skip button
+     is included since it's a first-run flourish, not something
+     that should ever block getting into the app.
 
    Changelog vs 2.2.0:
    - Removed the QR-code result view. The qrcodejs library on cdnjs
@@ -85,13 +96,14 @@
     } catch (e) {}
   }
 
-  const APP_VERSION = "2.3.0";
+  const APP_VERSION = "2.4.0";
   log(`photobooth.js v${APP_VERSION} loading...`);
 
   /* ------------------------------------------------------------
      1. REQUIRED DOM ELEMENTS
   ------------------------------------------------------------ */
   const REQUIRED_IDS = [
+    "letterScreen", "letterSkipBtn", "letterHint", "envelope", "letterCard", "letterCloseBtn", "corgiWrap",
     "welcomeScreen", "cameraScreen", "previewScreen", "processingScreen",
     "printingScreen", "resultScreen",
     "startBtn", "switchCamera", "cancelSession", "downloadBtn", "retakeBtn", "newSession",
@@ -398,7 +410,7 @@
      3. SCREEN MANAGEMENT
   ------------------------------------------------------------ */
   const SCREENS = [
-    "welcomeScreen", "cameraScreen", "previewScreen",
+    "letterScreen", "welcomeScreen", "cameraScreen", "previewScreen",
     "processingScreen", "printingScreen", "resultScreen",
   ];
 
@@ -441,6 +453,94 @@
   function clearAllTimers() {
     state.captureTimers.forEach((id) => window.clearTimeout(id));
     state.captureTimers = [];
+  }
+
+  /* ------------------------------------------------------------
+     3.5 LETTER INTRO
+     Apple the corgi delivers a pop-up letter before the app hands
+     off to the welcome screen. Sequenced off real 'animationend'
+     events (see the matching keyframes in style.css) rather than
+     guessed timeouts, so it stays correctly synced even when
+     prefers-reduced-motion collapses every duration to ~0 — the
+     events still fire in order, the sequence just plays instantly.
+  ------------------------------------------------------------ */
+  function onAnimEnd(node, expectedName, cb) {
+    if (!node) { cb(); return; }
+    let done = false;
+    function handler(evt) {
+      if (evt.target !== node) return;
+      if (expectedName && evt.animationName !== expectedName) return;
+      if (done) return;
+      done = true;
+      node.removeEventListener("animationend", handler);
+      cb();
+    }
+    node.addEventListener("animationend", handler);
+  }
+
+  function playLetterIntro() {
+    if (!el.letterScreen || !el.corgiWrap || !el.envelope || !el.letterCard) {
+      warn("Letter intro markup missing — skipping straight to welcome screen.");
+      showScreen("welcomeScreen");
+      return;
+    }
+
+    let finished = false;
+    function finishIntro() {
+      if (finished) return;
+      finished = true;
+      showScreen("welcomeScreen");
+      log("Letter intro complete.");
+    }
+
+    // Skip button bails out of whatever stage the animation is in.
+    safeAddListener(el.letterSkipBtn, "click", finishIntro, "letterSkipBtn:click");
+
+    log("Letter intro starting — Apple is on her way.");
+
+    // 1. Apple runs in carrying the letter.
+    el.corgiWrap.classList.add("corgi-run-in");
+    onAnimEnd(el.corgiWrap, "corgiRunIn", () => {
+      if (finished) return;
+      el.corgiWrap.classList.remove("corgi-run-in");
+      el.corgiWrap.classList.add("corgi-idle");
+
+      // 2. Drop the envelope.
+      el.envelope.hidden = false;
+      el.envelope.classList.add("envelope-drop");
+      onAnimEnd(el.envelope, "envelopeDrop", () => {
+        if (finished) return;
+        if (el.letterHint) el.letterHint.textContent = "";
+
+        // 3. Pop the letter open.
+        el.envelope.hidden = true;
+        el.letterCard.hidden = false;
+        el.letterCard.classList.add("letter-pop-open");
+      });
+    });
+
+    // 4. Closing the letter kicks off the rest: fold shut, Apple
+    // trots over, eats it, and runs off — then the app continues.
+    safeAddListener(el.letterCloseBtn, "click", () => {
+      if (finished) return;
+      el.letterCard.classList.remove("letter-pop-open");
+      el.letterCard.classList.add("letter-pop-close");
+
+      onAnimEnd(el.letterCard, "letterPopClose", () => {
+        if (finished) return;
+        el.letterCard.hidden = true;
+        el.corgiWrap.classList.remove("corgi-idle");
+
+        el.corgiWrap.classList.add("corgi-eat");
+        onAnimEnd(el.corgiWrap, "corgiEatChomp", () => {
+          if (finished) return;
+          el.corgiWrap.classList.remove("corgi-eat");
+
+          el.corgiWrap.classList.add("corgi-run-out");
+          onAnimEnd(el.corgiWrap, "corgiRunOut", finishIntro);
+        });
+      });
+    }, "letterCloseBtn:click");
   }
 
   /* ------------------------------------------------------------
@@ -1403,7 +1503,10 @@
     if (el.filter && el.filter.value) state.currentFilter = el.filter.value;
     if (el.template && el.template.value) state.currentTemplate = el.template.value;
 
-    showScreen("welcomeScreen");
+    // letterScreen is already the active screen in the HTML markup;
+    // playLetterIntro() hands off to showScreen("welcomeScreen") once
+    // Apple has delivered, eaten, and run off with the letter.
+    playLetterIntro();
     log(`Photobooth init complete. Version ${APP_VERSION}.`);
   }
 
