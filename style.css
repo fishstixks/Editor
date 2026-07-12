@@ -1,27 +1,316 @@
-/* ==========================================
-   DIGITAL PHOTOBOOTH
-   STYLE.CSS
-========================================== */
+/* ==========================================================
+   DIGITAL PHOTOBOOTH v2
+========================================================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Inter,Arial,sans-serif;
+}
 
 html,
 body{
-    margin:0;
-    padding:0;
+
+    width:100%;
+    height:100%;
+    overflow:hidden;
+
+    background:#111827;
+
+    color:white;
+
 }
 
-/* Smooth fade animations */
+/* ==========================================================
+SCREENS
+========================================================== */
 
-*{
-    transition:all .25s ease;
+.screen{
+
+    position:absolute;
+
+    inset:0;
+
+    display:none;
+
+    justify-content:center;
+
+    align-items:center;
+
+    padding:24px;
+
 }
 
-/* ============================
-   FLASH EFFECT
-============================ */
+.screen.active{
 
-#flashOverlay{
+    display:flex;
 
-    position:fixed;
+}
+
+/* ==========================================================
+CARD
+========================================================== */
+
+.card{
+
+    width:min(420px,100%);
+
+    background:#1f2937;
+
+    border-radius:28px;
+
+    padding:32px;
+
+    box-shadow:
+
+    0 20px 60px rgba(0,0,0,.35);
+
+}
+
+.card h1{
+
+    text-align:center;
+
+    margin-bottom:10px;
+
+    font-size:34px;
+
+}
+
+.card h2{
+
+    text-align:center;
+
+}
+
+.card p{
+
+    text-align:center;
+
+    margin-bottom:28px;
+
+    color:#cbd5e1;
+
+}
+
+.card label{
+
+    display:block;
+
+    margin-top:18px;
+
+    margin-bottom:8px;
+
+    font-weight:600;
+
+}
+
+.card select{
+
+    width:100%;
+
+    height:52px;
+
+    border:none;
+
+    outline:none;
+
+    border-radius:14px;
+
+    background:#374151;
+
+    color:white;
+
+    padding:0 14px;
+
+    font-size:16px;
+
+}
+
+.card button{
+
+    margin-top:28px;
+
+    width:100%;
+
+    height:56px;
+
+    border:none;
+
+    border-radius:16px;
+
+    background:#2563eb;
+
+    color:white;
+
+    font-size:18px;
+
+    font-weight:700;
+
+    cursor:pointer;
+
+}
+
+.card button:hover{
+
+    background:#3b82f6;
+
+}
+
+/* ==========================================================
+CAMERA
+========================================================== */
+
+.cameraContainer{
+
+    position:relative;
+
+    width:min(430px,100%);
+
+    aspect-ratio:3/4;
+
+    overflow:hidden;
+
+    border-radius:28px;
+
+    background:black;
+
+    box-shadow:
+
+    0 25px 60px rgba(0,0,0,.45);
+
+}
+
+video{
+
+    width:100%;
+
+    height:100%;
+
+    object-fit:cover;
+
+    transform:scaleX(-1);
+
+}
+
+/* ==========================================================
+TOP BAR
+========================================================== */
+
+#topBar{
+
+    position:absolute;
+
+    top:18px;
+
+    left:18px;
+
+    right:18px;
+
+    display:flex;
+
+    justify-content:space-between;
+
+}
+
+#topBar button{
+
+    width:48px;
+
+    height:48px;
+
+    border:none;
+
+    border-radius:50%;
+
+    background:rgba(0,0,0,.45);
+
+    color:white;
+
+    font-size:20px;
+
+    cursor:pointer;
+
+}
+
+/* ==========================================================
+COUNTDOWN
+========================================================== */
+
+#countdown{
+
+    position:absolute;
+
+    inset:0;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-size:110px;
+
+    font-weight:900;
+
+    color:white;
+
+    text-shadow:
+
+    0 8px 20px black;
+
+    opacity:0;
+
+}
+
+.countVisible{
+
+    animation:countAnim 1s linear;
+
+}
+
+@keyframes countAnim{
+
+0%{
+
+opacity:0;
+
+transform:scale(.5);
+
+}
+
+20%{
+
+opacity:1;
+
+}
+
+80%{
+
+opacity:1;
+
+transform:scale(1);
+
+}
+
+100%{
+
+opacity:0;
+
+transform:scale(1.4);
+
+}
+
+}
+
+/* ==========================================================
+FLASH
+========================================================== */
+
+#flash{
+
+    position:absolute;
 
     inset:0;
 
@@ -31,11 +320,9 @@ body{
 
     pointer-events:none;
 
-    z-index:9999;
-
 }
 
-.flash{
+.flashAnim{
 
     animation:flash .35s ease;
 
@@ -43,211 +330,77 @@ body{
 
 @keyframes flash{
 
-    0%{
+0%{
 
-        opacity:0;
-
-    }
-
-    40%{
-
-        opacity:1;
-
-    }
-
-    100%{
-
-        opacity:0;
-
-    }
+opacity:0;
 
 }
 
-/* ============================
-   PRINTER
-============================ */
+35%{
 
-.printer{
-
-    width:100%;
-
-    max-width:320px;
-
-    margin:auto;
+opacity:1;
 
 }
 
-.printer-top{
+100%{
 
-    background:#2f3640;
-
-    color:white;
-
-    padding:18px;
-
-    border-radius:18px 18px 0 0;
-
-    text-align:center;
-
-    font-weight:bold;
-
-    letter-spacing:2px;
+opacity:0;
 
 }
 
-.paper-slot{
+}
 
-    background:#111827;
+/* ==========================================================
+PHOTO COUNTER
+========================================================== */
 
-    height:420px;
+#progress{
 
-    overflow:hidden;
+    position:absolute;
 
-    border-radius:0 0 18px 18px;
+    bottom:20px;
 
-    display:flex;
+    left:50%;
 
-    justify-content:center;
+    transform:translateX(-50%);
 
-    align-items:flex-start;
+    padding:10px 20px;
+
+    border-radius:999px;
+
+    background:rgba(0,0,0,.45);
+
+    font-weight:700;
 
 }
 
-.paper-slot img{
+/* ==========================================================
+LOADER
+========================================================== */
 
-    width:240px;
+.loader{
 
-    background:white;
+    width:70px;
 
-    border-radius:0 0 12px 12px;
+    height:70px;
 
-    transform:translateY(-100%);
+    border-radius:50%;
 
-}
+    border:6px solid rgba(255,255,255,.15);
 
-/* Paper comes out of printer */
+    border-top:6px solid white;
 
-.printing{
+    margin:20px auto;
 
-    animation:printPaper 3s ease forwards;
-
-}
-
-@keyframes printPaper{
-
-    0%{
-
-        transform:translateY(-100%);
-
-    }
-
-    100%{
-
-        transform:translateY(0);
-
-    }
+    animation:spin 1s linear infinite;
 
 }
 
-/* ============================
-   COUNTDOWN
-============================ */
+@keyframes spin{
 
-#countdown{
+to{
 
-    animation:pop .5s ease infinite;
-
-}
-
-@keyframes pop{
-
-    0%{
-
-        transform:scale(.7);
-
-    }
-
-    50%{
-
-        transform:scale(1.1);
-
-    }
-
-    100%{
-
-        transform:scale(1);
-
-    }
-
-}
-
-/* ============================
-   PREVIEW
-============================ */
-
-#previewImage{
-
-    box-shadow:
-
-        0 20px 40px rgba(0,0,0,.35);
-
-}
-
-/* ============================
-   BUTTONS
-============================ */
-
-button{
-
-    cursor:pointer;
-
-}
-
-button:active{
-
-    transform:scale(.97);
-
-}
-
-/* ============================
-   SCROLLBAR
-============================ */
-
-::-webkit-scrollbar{
-
-    width:8px;
-
-}
-
-::-webkit-scrollbar-thumb{
-
-    background:#475569;
-
-    border-radius:20px;
-
-}
-
-/* ============================
-   SMALL SCREEN
-============================ */
-
-@media(max-width:500px){
-
-.printer-top{
-
-    font-size:14px;
-
-}
-
-.paper-slot{
-
-    height:360px;
-
-}
-
-.paper-slot img{
-
-    width:200px;
+transform:rotate(360deg);
 
 }
 
